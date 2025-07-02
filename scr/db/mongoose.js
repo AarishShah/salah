@@ -6,7 +6,8 @@ const username = encodeURIComponent(process.env.DB_USERNAME);
 const password = encodeURIComponent(process.env.DB_PASSWORD);
 const clusterUrl = encodeURIComponent(process.env.DB_CLUSTER_URL);
 const dbName = encodeURIComponent(process.env.DB_NAME);
-const uri = `mongodb+srv://${username}:${password}@${clusterUrl}/${dbName}?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${username}:${password}@${clusterUrl}?retryWrites=true&w=majority`;
+// const uri = `mongodb+srv://${username}:${password}@${clusterUrl}/${dbName}?retryWrites=true&w=majority`;
 
 mongoose.connect
     (
