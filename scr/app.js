@@ -8,10 +8,10 @@ require("./db/mongoose");
 
 // Route imports
 const authRoutes = require("./routes/auth.routes");
-const userRoutes = require("./routes/user.routes");
-const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
-const prayerTimingRoutes = require("./routes/prayerTiming.routes");
-const editorRequestRoutes = require("./routes/editorRequest.routes");
+// const userRoutes = require("./routes/user.routes");
+// const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
+// const prayerTimingRoutes = require("./routes/prayerTiming.routes");
+// const editorRequestRoutes = require("./routes/editorRequest.routes");
 
 // Initialize app
 const app = express();
@@ -30,7 +30,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging (optional - for development)
+// Request logging
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
@@ -45,16 +45,16 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/timing-config', timingConfigRoutes);
-app.use('/api/prayer-timings', prayerTimingRoutes);
-app.use('/api/editor-requests', editorRequestRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/timing-config', timingConfigRoutes);
+// app.use('/api/prayer-timings', prayerTimingRoutes);
+// app.use('/api/editor-requests', editorRequestRoutes);
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
     status: 'failed',
-    message: 'Route not found'
+    message: 'Route not found mate :/'
   });
 });
 
