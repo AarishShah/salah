@@ -36,22 +36,14 @@ const sendOTP = async (phone, name) => {
     // If new user, create account
     if (!user) {
       if (!name) {
-        return {
-          status: 'failed',
-          code: 400,
-          message: 'Name is required for new users'
-        };
+        return { status: 'failed', code: 400, message: 'Name is required for new users' };
       }
       user = await User.create({ phone, name, role: 'user' });
     }
 
     // Check if blocked
     if (user.isBlocked) {
-      return {
-        status: 'failed',
-        code: 403,
-        message: 'Account is blocked. Contact admin.'
-      };
+      return { status: 'failed', code: 403, message: 'Account is blocked. Contact admin.' };
     }
 
     // Check OTP rate limiting
@@ -59,11 +51,7 @@ const sendOTP = async (phone, name) => {
       const timeSinceLastOTP = Date.now() - user.otp.lastSentAt.getTime();
       if (timeSinceLastOTP < 60000) { // 1 minute
         const waitTime = Math.ceil((60000 - timeSinceLastOTP) / 1000);
-        return {
-          status: 'failed',
-          code: 429,
-          message: `Please wait ${waitTime} seconds before requesting another OTP`
-        };
+        return { status: 'failed', code: 429, message: `Please wait ${waitTime} seconds before requesting another OTP` };
       }
     }
 
