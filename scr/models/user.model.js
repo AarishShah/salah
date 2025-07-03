@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   // Basic Information
@@ -102,7 +103,7 @@ userSchema.methods.cleanExpiredOtp = function() {
 
 // Method to generate OTP
 userSchema.methods.generateOTP = function() {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   this.otp = {
     code,
     expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
