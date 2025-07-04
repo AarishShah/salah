@@ -21,7 +21,7 @@ const seasonalAdjustmentSchema = new mongoose.Schema({
   }]
 });
 
-const  timingConfigSchema = new mongoose.Schema({
+const  mosqueTimingConfigSchema = new mongoose.Schema({
   // Section 1: Mosque Information
   mosqueInfo: {
     name: { type: String, required: true, trim: true },
@@ -69,29 +69,29 @@ const  timingConfigSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
- timingConfigSchema.index({ 'mosqueInfo.locality': 1, isActive: 1 });
- timingConfigSchema.index({ 'mosqueInfo.coordinates': '2dsphere' }); // For geospatial queries
+ mosqueTimingConfigSchema.index({ 'mosqueInfo.locality': 1, isActive: 1 });
+ mosqueTimingConfigSchema.index({ 'mosqueInfo.coordinates': '2dsphere' }); // For geospatial queries
 
 // Virtual for full mosque details
- timingConfigSchema.virtual('fullName').get(function ()
+ mosqueTimingConfigSchema.virtual('fullName').get(function ()
 {
   return `${this.mosqueInfo.name}, ${this.mosqueInfo.locality}`;
 });
 
 // Method to get prayer time for a specific prayer
- timingConfigSchema.methods.getPrayerSchedule = function (prayerName)
+ mosqueTimingConfigSchema.methods.getPrayerSchedule = function (prayerName)
 {
   return this.dailySchedule.find(schedule => schedule.name === prayerName);
 };
 
 // Method to check if mosque has seasonal adjustments
- timingConfigSchema.methods.hasSeasonalAdjustments = function ()
+ mosqueTimingConfigSchema.methods.hasSeasonalAdjustments = function ()
 {
   return this.seasonalAdjustments.some(adj => adj.hasSeasonalChanges);
 };
 
 // Pre-save middleware to ensure all 5 prayers are in dailySchedule
- timingConfigSchema.pre('save', function (next)
+ mosqueTimingConfigSchema.pre('save', function (next)
 {
   const prayers = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha'];
   const existingPrayers = this.dailySchedule.map(s => s.name);
@@ -112,4 +112,4 @@ const  timingConfigSchema = new mongoose.Schema({
   next();
 });
 
-module.exports = mongoose.model('TimingConfig',  timingConfigSchema);
+module.exports = mongoose.model('MosqueTimingConfig',  mosqueTimingConfigSchema);
