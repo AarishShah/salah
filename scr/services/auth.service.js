@@ -276,9 +276,41 @@ const logout = async (userId, refreshToken) => {
   }
 };
 
+
+const updateUserRole = async (userId, newRole) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return { status: 'failed', code: 404, message: 'User not found' };
+    }
+
+    user.role = newRole;
+    await user.save();
+
+    return {
+      status: 'success',
+      message: 'User role updated successfully',
+      user: {
+        id: user._id,
+        phone: user.phone,
+        role: user.role
+      }
+    };
+  } catch (error) {
+    console.error('UpdateUserRole error:', error);
+    return {
+      status: 'failed',
+      code: 500,
+      message: 'Failed to update user role'
+    };
+  }
+};
+
+
 module.exports = {
   sendOTP,
   verifyOTP,
   refreshToken,
-  logout
+  logout,
+  updateUserRole
 };

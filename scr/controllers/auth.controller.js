@@ -71,9 +71,21 @@ const logout = catchError(async (req, res) => {
   return res.json(result);
 });
 
+
+
+const updateUserRole = catchError(async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+
+  const result = await authService.updateUserRole(id, role);
+  return res.status(result.code || 200).json(result);
+});
+
+
 module.exports = {
   sendOTP,
   verifyOTP,
   refreshToken,
-  logout
+  logout,
+  updateUserRole
 };

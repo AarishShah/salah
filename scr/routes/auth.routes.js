@@ -13,6 +13,10 @@ router
   .post("/refresh-token", controller.refreshToken)
   
   // Protected routes - require authentication
-  .post("/logout", userAuth, controller.logout);
+  .post("/logout", userAuth, controller.logout)
+  .put("/update-role/:id", Auth({ requiredRole: 'admin' }), controller.updateUserRole);
 
 module.exports = router;
+
+
+
