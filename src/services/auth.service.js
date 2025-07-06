@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user.model');
 
-// You'll need to implement this SMS service
-// const smsService = require('./sms.service');
+// Initialize Google OAuth2 client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateTokens = (user) => {
   const payload = {
     userId: user._id,
-    phone: user.phone,
+    email: user.email,
     role: user.role,
     assignedMosques: user.assignedMosques,
     permissions: user.permissions
@@ -28,117 +29,65 @@ const generateTokens = (user) => {
   return { accessToken, refreshToken };
 };
 
-const sendOTP = async (phone, name) => {
+const googleSignIn = async (idToken) => {
   try {
-    // Check if user exists
-    let user = await User.findOne({ phone });
-
-    // If new user, create account
-    if (!user) {
-      if (!name) {
-        return { status: 'failed', code: 400, message: 'Name is required for new users' };
-      }
-      user = await User.create({ phone, name, role: 'user' });
-    }
-
-    // Check if blocked
-    if (user.isBlocked) {
-      return { status: 'failed', code: 403, message: 'Account is blocked. Contact admin.' };
-    }
-
-    // Check OTP rate limiting
-    if (user.otp?.lastSentAt) {
-      const timeSinceLastOTP = Date.now() - user.otp.lastSentAt.getTime();
-      if (timeSinceLastOTP < 60000) { // 1 minute
-        const waitTime = Math.ceil((60000 - timeSinceLastOTP) / 1000);
-        return { status: 'failed', code: 429, message: `Please wait ${waitTime} seconds before requesting another OTP` };
-      }
-    }
-
-    // Generate and save OTP
-    const otp = user.generateOTP();
-    await user.save();
-
-    // Send SMS (implement based on your SMS provider)
-    // await smsService.sendSMS(phone, `Your SALAH app OTP is: ${otp}`);
-
-    // For development, log OTP
-    console.log(`OTP for ${phone}: ${otp}`);
-
-    return {
-      status: 'success',
-      message: 'OTP sent successfully',
-      isNewUser: user.loginCount === 0,
-      // Remove in production
-      developmentOTP: process.env.NODE_ENV === 'development' ? otp : undefined
-    };
-
-  } catch (error) {
-    console.error('SendOTP error:', error);
-    return {
-      status: 'failed',
-      code: 500,
-      message: 'Failed to send OTP'
-    };
-  }
-};
-
-const verifyOTP = async (phone, otp) => {
-  try {
-    const user = await User.findOne({ phone });
-
-    if (!user) {
-      return {
-        status: 'failed',
-        code: 404,
-        message: 'User not found'
-      };
-    }
-
-    // Clean expired OTPs
-    user.cleanExpiredOtp();
-
-    // Check if OTP exists
-    if (!user.otp || !user.otp.code) {
-      return {
-        status: 'failed',
-        code: 400,
-        message: 'No OTP found. Please request a new one.'
-      };
-    }
-
-    // Check max attempts
-    if (user.otp.attempts >= 3) {
-      user.otp = undefined;
-      await user.save();
-      return {
-        status: 'failed',
-        code: 429,
-        message: 'Maximum attempts exceeded. Please request a new OTP.'
-      };
-    }
-
-    // Verify OTP
-    const isValid = user.verifyOTP(otp);
-
-    if (!isValid) {
-      await user.save(); // Save attempt count
-      const remainingAttempts = 3 - user.otp.attempts;
+    // Verify Google ID token
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+    } catch (error) {
+      console.error('Google token verification error:', error);
       return {
         status: 'failed',
         code: 401,
-        message: `Invalid OTP. ${remainingAttempts} attempts remaining.`
+        message: 'Invalid Google ID token'
       };
     }
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      // Update existing user with latest Google info
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+      user.name = name;
+      user.profilePicture = picture;
+      
+      // Check if blocked
+      if (user.isBlocked) {
+        return { 
+          status: 'failed', 
+          code: 403, 
+          message: 'Account is blocked. Contact admin.' 
+        };
+      }
+    } else {
+      // Create new user
+      user = new User({
+        googleId,
+        email,
+        name,
+        profilePicture: picture,
+        authProvider: 'google',
+        role: 'user'
+      });
+    }
+
+    // Clean expired tokens
+    user.cleanExpiredTokens();
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user);
 
     // Store refresh token
-    user.refreshTokens = user.refreshTokens.filter(rt =>
-      rt.expiresAt > new Date()
-    ); // Clean expired tokens
-
     user.refreshTokens.push({
       token: refreshToken,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
@@ -151,25 +100,27 @@ const verifyOTP = async (phone, otp) => {
 
     return {
       status: 'success',
-      message: 'Login successful',
+      message: user.loginCount === 1 ? 'Welcome to SALAH!' : 'Login successful',
       accessToken,
       refreshToken,
       user: {
         id: user._id,
-        phone: user.phone,
+        email: user.email,
         name: user.name,
+        profilePicture: user.profilePicture,
         role: user.role,
         permissions: user.permissions,
-        assignedMosques: user.assignedMosques
+        assignedMosques: user.assignedMosques,
+        isNewUser: user.loginCount === 1
       }
     };
 
   } catch (error) {
-    console.error('VerifyOTP error:', error);
+    console.error('GoogleSignIn error:', error);
     return {
       status: 'failed',
       code: 500,
-      message: 'Failed to verify OTP'
+      message: 'Failed to authenticate with Google'
     };
   }
 };
@@ -197,6 +148,9 @@ const refreshToken = async (refreshTokenInput) => {
         message: 'User not found or inactive'
       };
     }
+
+    // Clean expired tokens
+    user.cleanExpiredTokens();
 
     // Check if refresh token exists and is valid
     const tokenIndex = user.refreshTokens.findIndex(rt =>
@@ -277,8 +231,7 @@ const logout = async (userId, refreshToken) => {
 };
 
 module.exports = {
-  sendOTP,
-  verifyOTP,
+  googleSignIn,
   refreshToken,
   logout
 };

@@ -8,8 +8,7 @@ const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 
 router
   // Public routes - no auth required
-  .post("/send-otp", controller.sendOTP)
-  .post("/verify-otp", controller.verifyOTP)
+  .post("/google-signin", controller.googleSignIn)
   .post("/refresh-token", controller.refreshToken)
   
   // Protected routes - require authentication
