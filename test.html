@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Google ID Token - SALAH</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <h1>Get Google ID Token for SALAH Testing</h1>
+    
+    <div id="g_id_onload"
+         data-client_id="880315655652-ss3gt4fjcvlci267t8gl1m7sta2ucedb.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin" 
+         data-type="standard"
+         data-theme="outline"
+         data-size="large">
+    </div>
+    
+    <div id="result" style="margin-top: 20px;">
+        <h3>ID Token will appear here after sign in:</h3>
+        <textarea id="token" style="width: 100%; height: 200px;" placeholder="Sign in to get token"></textarea>
+        <button onclick="copyToken()">Copy Token</button>
+    </div>
+
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("ID Token: " + response.credential);
+            document.getElementById('token').value = response.credential;
+            alert('Token received! You can now copy it and use in Postman.');
+        }
+        
+        function copyToken() {
+            const token = document.getElementById('token');
+            token.select();
+            document.execCommand('copy');
+            alert('Token copied to clipboard!');
+        }
+    </script>
+</body>
+</html>
