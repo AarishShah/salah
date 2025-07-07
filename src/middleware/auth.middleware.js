@@ -25,8 +25,7 @@ const Auth = (options = {}) => {
         });
       }
       
-      // Get fresh user data
-      const user = await User.findById(decoded.userId).select('-otp -refreshTokens');
+      const user = await User.findById(decoded.userId).select('-refreshTokens');
       
       if (!user) {
         return res.status(404).json({
@@ -89,7 +88,8 @@ const Auth = (options = {}) => {
       // Attach user to request
       req.user = {
         userId: user._id,
-        phone: user.phone,
+        email: user.email,
+        phone: user.phone,  // Now optional (might be null)
         name: user.name,
         role: user.role,
         assignedMosques: user.assignedMosques,

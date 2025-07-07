@@ -1,36 +1,17 @@
 const authService = require("../services/auth.service");
 const catchError = require("../utils/catchError");
 
-const sendOTP = catchError(async (req, res) => {
-  const { phone, name } = req.body;
+const googleSignIn = catchError(async (req, res) => {
+  const { idToken } = req.body;
   
-  if (!phone) {
+  if (!idToken) {
     return res.status(400).json({ 
       status: 'failed', 
-      message: 'Phone number is required' 
+      message: 'Google ID token is required' 
     });
   }
   
-  const result = await authService.sendOTP(phone, name);
-  
-  if (result.status === 'failed') {
-    return res.status(result.code || 400).json(result);
-  }
-  
-  return res.json(result);
-});
-
-const verifyOTP = catchError(async (req, res) => {
-  const { phone, otp } = req.body;
-  
-  if (!phone || !otp) {
-    return res.status(400).json({ 
-      status: 'failed', 
-      message: 'Phone and OTP are required' 
-    });
-  }
-  
-  const result = await authService.verifyOTP(phone, otp);
+  const result = await authService.googleSignIn(idToken);
   
   if (result.status === 'failed') {
     return res.status(result.code || 400).json(result);
@@ -72,8 +53,7 @@ const logout = catchError(async (req, res) => {
 });
 
 module.exports = {
-  sendOTP,
-  verifyOTP,
+  googleSignIn,
   refreshToken,
   logout
 };
