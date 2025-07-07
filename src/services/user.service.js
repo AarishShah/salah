@@ -1,11 +1,13 @@
 const User = require('../models/user.model');
+const EditorRequest = require('../models/editorRequest.model');
+const MosqueTimingConfig = require('../models/mosqueTimingConfig.model');
 
-// Get user profile
+// User Services
 const getProfile = async (userId) => {
   try {
     const user = await User.findById(userId)
-      .select('phone name language role assignedMosques lastLoginAt loginCount createdAt')
-      .populate('assignedMosques', 'name address');
+      .select('-refreshTokens -__v')
+      .populate('assignedMosques', 'name city country');
     
     if (!user) {
       return {
@@ -17,54 +19,43 @@ const getProfile = async (userId) => {
     
     return {
       status: 'success',
-      data: { user }
+      user
     };
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error('GetProfile error:', error);
     return {
       status: 'failed',
       code: 500,
-      message: 'Error fetching user profile'
+      message: 'Failed to fetch profile'
     };
   }
 };
 
-// Update user profile
-const updateProfile = async (userId, updateData) => {
+const updateProfile = async (userId, updates) => {
   try {
-    // Only allow name and language updates
-    const allowedFields = ['name', 'language'];
-    const filteredData = {};
+    // Only allow specific fields to be updated
+    const allowedUpdates = ['name', 'phone', 'language'];
+    const filteredUpdates = {};
     
-    for (const field of allowedFields) {
-      if (updateData[field] !== undefined) {
-        filteredData[field] = updateData[field];
+    Object.keys(updates).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        filteredUpdates[key] = updates[key];
       }
-    }
+    });
     
-    // Validate language if provided
-    if (filteredData.language && !['en', 'ur'].includes(filteredData.language)) {
+    if (Object.keys(filteredUpdates).length === 0) {
       return {
         status: 'failed',
         code: 400,
-        message: 'Invalid language. Must be "en" or "ur"'
-      };
-    }
-    
-    // Validate name if provided
-    if (filteredData.name && filteredData.name.trim().length < 2) {
-      return {
-        status: 'failed',
-        code: 400,
-        message: 'Name must be at least 2 characters long'
+        message: 'No valid fields to update'
       };
     }
     
     const user = await User.findByIdAndUpdate(
       userId,
-      filteredData,
+      filteredUpdates,
       { new: true, runValidators: true }
-    ).select('phone name language role');
+    ).select('-refreshTokens -__v');
     
     if (!user) {
       return {
@@ -76,21 +67,20 @@ const updateProfile = async (userId, updateData) => {
     
     return {
       status: 'success',
-      data: { user },
-      message: 'Profile updated successfully'
+      message: 'Profile updated successfully',
+      user
     };
   } catch (error) {
-    console.error('Update profile error:', error);
+    console.error('UpdateProfile error:', error);
     return {
       status: 'failed',
       code: 500,
-      message: 'Error updating profile'
+      message: 'Failed to update profile'
     };
   }
 };
 
-// Delete user profile (soft delete)
-const deleteProfile = async (userId) => {
+const deleteAccount = async (userId) => {
   try {
     const user = await User.findById(userId);
     
@@ -102,63 +92,39 @@ const deleteProfile = async (userId) => {
       };
     }
     
-    // Soft delete - set isActive to false and clear refresh tokens
+    // Check if user is the last admin
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin', isActive: true });
+      if (adminCount <= 1) {
+        return {
+          status: 'failed',
+          code: 400,
+          message: 'Cannot delete the last admin account'
+        };
+      }
+    }
+    
+    // Soft delete - mark as inactive
     user.isActive = false;
-    user.refreshTokens = [];
+    user.refreshTokens = []; // Clear all tokens
+    user.assignedMosques = []; // Remove mosque assignments
     await user.save();
     
     return {
       status: 'success',
-      message: 'Account deactivated successfully'
+      message: 'Account deleted successfully'
     };
   } catch (error) {
-    console.error('Delete profile error:', error);
+    console.error('DeleteAccount error:', error);
     return {
       status: 'failed',
       code: 500,
-      message: 'Error deactivating account'
+      message: 'Failed to delete account'
     };
   }
 };
 
-// Get user sessions
-const getSessions = async (userId) => {
-  try {
-    const user = await User.findById(userId).select('refreshTokens');
-    
-    if (!user) {
-      return {
-        status: 'failed',
-        code: 404,
-        message: 'User not found'
-      };
-    }
-    
-    // Format sessions for response
-    const sessions = user.refreshTokens.map(token => ({
-      id: token._id,
-      deviceInfo: token.deviceInfo || 'Unknown device',
-      createdAt: token.createdAt,
-      expiresAt: token.expiresAt,
-      isExpired: new Date(token.expiresAt) < new Date()
-    }));
-    
-    return {
-      status: 'success',
-      data: { sessions }
-    };
-  } catch (error) {
-    console.error('Get sessions error:', error);
-    return {
-      status: 'failed',
-      code: 500,
-      message: 'Error fetching sessions'
-    };
-  }
-};
-
-// Delete specific session
-const deleteSession = async (userId, sessionId) => {
+const createEditorRequest = async (userId, mosqueIds, reason) => {
   try {
     const user = await User.findById(userId);
     
@@ -170,33 +136,107 @@ const deleteSession = async (userId, sessionId) => {
       };
     }
     
-    // Find the session
-    const sessionIndex = user.refreshTokens.findIndex(
-      token => token._id.toString() === sessionId
-    );
-    
-    if (sessionIndex === -1) {
+    if (user.role !== 'user') {
       return {
         status: 'failed',
-        code: 404,
-        message: 'Session not found'
+        code: 400,
+        message: 'Only users can request editor role'
       };
     }
     
-    // Remove the session
-    user.refreshTokens.splice(sessionIndex, 1);
-    await user.save();
+    // Check if user already has pending request
+    const existingRequest = await EditorRequest.findOne({
+      userId,
+      status: 'pending'
+    });
+    
+    if (existingRequest) {
+      return {
+        status: 'failed',
+        code: 400,
+        message: 'You already have a pending editor request'
+      };
+    }
+    
+    // Validate mosque IDs
+    const validMosques = await MosqueTimingConfig.find({
+      _id: { $in: mosqueIds },
+      isActive: true
+    });
+    
+    if (validMosques.length !== mosqueIds.length) {
+      return {
+        status: 'failed',
+        code: 400,
+        message: 'Some selected mosques are invalid'
+      };
+    }
+    
+    // Check if any mosque already has an editor
+    const mosquesWithEditors = await User.find({
+      role: 'editor',
+      isActive: true,
+      assignedMosques: { $in: mosqueIds }
+    }).select('assignedMosques');
+    
+    if (mosquesWithEditors.length > 0) {
+      return {
+        status: 'failed',
+        code: 400,
+        message: 'Some selected mosques already have editors'
+      };
+    }
+    
+    // Create editor request
+    const editorRequest = new EditorRequest({
+      userId,
+      requestedMosques: mosqueIds,
+      reason: reason || '',
+      status: 'pending'
+    });
+    
+    await editorRequest.save();
     
     return {
       status: 'success',
-      message: 'Session terminated successfully'
+      message: 'Editor request submitted successfully',
+      request: editorRequest
     };
   } catch (error) {
-    console.error('Delete session error:', error);
+    console.error('CreateEditorRequest error:', error);
     return {
       status: 'failed',
       code: 500,
-      message: 'Error terminating session'
+      message: 'Failed to create editor request'
+    };
+  }
+};
+
+const getEditorRequestStatus = async (userId) => {
+  try {
+    const request = await EditorRequest.findOne({ userId })
+      .sort('-createdAt')
+      .populate('requestedMosques', 'name city country')
+      .populate('reviewedBy', 'name email');
+    
+    if (!request) {
+      return {
+        status: 'success',
+        request: null,
+        message: 'No editor request found'
+      };
+    }
+    
+    return {
+      status: 'success',
+      request
+    };
+  } catch (error) {
+    console.error('GetEditorRequestStatus error:', error);
+    return {
+      status: 'failed',
+      code: 500,
+      message: 'Failed to fetch editor request status'
     };
   }
 };
@@ -204,7 +244,7 @@ const deleteSession = async (userId, sessionId) => {
 module.exports = {
   getProfile,
   updateProfile,
-  deleteProfile,
-  getSessions,
-  deleteSession
+  deleteAccount,
+  createEditorRequest,
+  getEditorRequestStatus,
 };
