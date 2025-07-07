@@ -21,7 +21,7 @@ const getAllUsers = async (filters) => {
     const totalUsers = await User.countDocuments(query);
     const users = await User.find(query)
       .select('-refreshTokens -__v')
-      .populate('assignedMosques', 'name city')
+      .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality')  // CHANGED
       .sort('-createdAt')
       .limit(limit)
       .skip((page - 1) * limit);
@@ -50,7 +50,7 @@ const getUser = async (userId) => {
   try {
     const user = await User.findById(userId)
       .select('-refreshTokens -__v')
-      .populate('assignedMosques', 'name address city state country');
+      .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.address mosqueInfo.locality mosqueInfo.contactPerson');  // CHANGED
     
     if (!user) {
       return {
@@ -220,16 +220,17 @@ const updateUserMosques = async (userId, mosqueIds) => {
       };
     }
     
-    // Validate mosques exist
+    // Validate mosques exist and are active
     const validMosques = await MosqueTimingConfig.find({
-      _id: { $in: mosqueIds }
+      _id: { $in: mosqueIds },
+      isActive: true  // ADDED: Only consider active mosques
     });
     
     if (validMosques.length !== mosqueIds.length) {
       return {
         status: 'failed',
         code: 400,
-        message: 'Some mosque IDs are invalid'
+        message: 'Some mosque IDs are invalid or inactive'
       };
     }
     
@@ -271,7 +272,7 @@ const getAllEditors = async () => {
   try {
     const editors = await User.find({ role: 'editor', isActive: true })
       .select('name email assignedMosques createdAt')
-      .populate('assignedMosques', 'name city country')
+      .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
       .sort('name');
     
     return {
@@ -291,12 +292,12 @@ const getAllEditors = async () => {
 
 const getEditorRequests = async (status) => {
   try {
-    const query = {};
+    const query = { isActive: true };  // ADDED: Only get active requests
     if (status) query.status = status;
     
     const requests = await EditorRequest.find(query)
       .populate('userId', 'name email profilePicture')
-      .populate('requestedMosques', 'name city country')
+      .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
       .populate('reviewedBy', 'name email')
       .sort('-createdAt');
     
@@ -326,6 +327,14 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
         status: 'failed',
         code: 404,
         message: 'Editor request not found'
+      };
+    }
+    
+    if (!request.isActive) {  // ADDED: Check if request is active
+      return {
+        status: 'failed',
+        code: 400,
+        message: 'Request is no longer active'
       };
     }
     
@@ -372,6 +381,7 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
       request.status = 'approved';
       request.reviewedBy = adminId;
       request.reviewedAt = new Date();
+      request.isActive = false;  // ADDED: Mark as inactive after processing
       await request.save();
       
       return {
@@ -384,7 +394,8 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
       request.status = 'rejected';
       request.reviewedBy = adminId;
       request.reviewedAt = new Date();
-      request.rejectionReason = rejectionReason || 'No reason provided';
+      request.reviewNote = rejectionReason || 'No reason provided';  // CHANGED: from rejectionReason to reviewNote
+      request.isActive = false;  // ADDED: Mark as inactive after processing
       await request.save();
       
       return {
@@ -455,7 +466,7 @@ const getUserStats = async () => {
             },
             {
               $lookup: {
-                from: 'mosqueTimingConfigs',
+                from: 'mosquetimingconfigs',  // CHANGED: Ensure correct collection name
                 localField: 'assignedMosques',
                 foreignField: '_id',
                 as: 'mosques'
@@ -509,7 +520,10 @@ const getUserStats = async () => {
     }
 
     // Get pending editor requests count
-    const pendingRequests = await EditorRequest.countDocuments({ status: 'pending' });
+    const pendingRequests = await EditorRequest.countDocuments({ 
+      status: 'pending',
+      isActive: true  // ADDED: Only count active pending requests
+    });
     processedStats.pendingEditorRequests = pendingRequests;
 
     return {

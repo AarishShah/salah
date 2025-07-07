@@ -7,7 +7,7 @@ const getProfile = async (userId) => {
   try {
     const user = await User.findById(userId)
       .select('-refreshTokens -__v')
-      .populate('assignedMosques', 'name city country');
+      .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address'); // CHANGED
     
     if (!user) {
       return {
@@ -144,10 +144,20 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
       };
     }
     
+    // ADDED: Validate reason since it's required in model
+    if (!reason || !reason.trim()) {
+      return {
+        status: 'failed',
+        code: 400,
+        message: 'Please provide a reason for your editor request'
+      };
+    }
+    
     // Check if user already has pending request
     const existingRequest = await EditorRequest.findOne({
       userId,
-      status: 'pending'
+      status: 'pending',
+      isActive: true  // ADDED
     });
     
     if (existingRequest) {
@@ -191,8 +201,9 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
     const editorRequest = new EditorRequest({
       userId,
       requestedMosques: mosqueIds,
-      reason: reason || '',
-      status: 'pending'
+      reason: reason.trim(),  // CHANGED: trim the reason
+      status: 'pending',
+      isActive: true  // ADDED
     });
     
     await editorRequest.save();
@@ -214,9 +225,12 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
 
 const getEditorRequestStatus = async (userId) => {
   try {
-    const request = await EditorRequest.findOne({ userId })
+    const request = await EditorRequest.findOne({ 
+      userId,
+      isActive: true  // ADDED
+    })
       .sort('-createdAt')
-      .populate('requestedMosques', 'name city country')
+      .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
       .populate('reviewedBy', 'name email');
     
     if (!request) {
