@@ -2,17 +2,12 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 
-let uri;
+const username = encodeURIComponent(process.env.DB_USERNAME);
+const password = encodeURIComponent(process.env.DB_PASSWORD);
+const clusterUrl = encodeURIComponent(process.env.DB_CLUSTER_URL);
+const dbName = encodeURIComponent(process.env.DB_NAME);
+const uri = `mongodb+srv://${username}:${password}@${clusterUrl}/${dbName}?retryWrites=true&w=majority`;
 
-if (process.env.DB_USERNAME && process.env.DB_PASSWORD) {
-    const username = encodeURIComponent(process.env.DB_USERNAME);
-    const password = encodeURIComponent(process.env.DB_PASSWORD);
-    const clusterUrl = encodeURIComponent(process.env.DB_CLUSTER_URL);
-    const dbName = encodeURIComponent(process.env.DB_NAME);
-    uri = `mongodb+srv://${username}:${password}@${clusterUrl}/${dbName}?retryWrites=true&w=majority`;
-} else {
-    uri = `mongodb://${process.env.DB_CLUSTER_URL}/${process.env.DB_NAME}`;
-}
 mongoose.connect
     (
         uri,

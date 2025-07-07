@@ -8,15 +8,10 @@ const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 
 router
   // Public routes - no auth required
-  .post("/send-otp", controller.sendOTP)
-  .post("/verify-otp", controller.verifyOTP)
+  .post("/google-signin", controller.googleSignIn)
   .post("/refresh-token", controller.refreshToken)
   
   // Protected routes - require authentication
-  .post("/logout", userAuth, controller.logout)
-  .put("/update-role/:id", Auth({ requiredRole: 'admin' }), controller.updateUserRole);
+  .post("/logout", userAuth, controller.logout);
 
 module.exports = router;
-
-
-
