@@ -9,7 +9,7 @@ require("./db/mongoose");
 // Route imports
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
-// const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
+const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
 // const prayerTimingRoutes = require("./routes/prayerTiming.routes");
 // const editorRequestRoutes = require("./routes/editorRequest.routes");
 
@@ -46,7 +46,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-// app.use('/api/timing-config', timingConfigRoutes);
+app.use('/api/timing-config', timingConfigRoutes);
 // app.use('/api/prayer-timings', prayerTimingRoutes);
 // app.use('/api/editor-requests', editorRequestRoutes);
 
