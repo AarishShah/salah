@@ -1,10 +1,10 @@
 {
   "name": "salah",
   "version": "1.0.0",
-  "main": "scr/app.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node scr/app.js",
-    "dev": "nodemon scr/app.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
   },
   "author": "Aarish, Daawar, Mafooq, Tareef",
   "license": "ISC",
