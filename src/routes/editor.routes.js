@@ -11,6 +11,6 @@ const editorAuth = Auth({ allowedRoles: ['editor', 'admin'] });
 // Routes for editors to manage their assigned resources.
 
 router
-  .get("/assigned-mosques", editorAuth, controller.getAssignedMosques);
+    .get("/assigned-mosques", editorAuth, controller.getAssignedMosques);
 
 module.exports = router;

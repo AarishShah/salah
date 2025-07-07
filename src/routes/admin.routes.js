@@ -11,14 +11,14 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 // Routes for admins to manage all users, roles, and requests.
 
 router
-  .get("/", adminAuth, controller.getAllUsers)
-  .get("/stats", adminAuth, controller.getUserStats)
-  .get("/editors", adminAuth, controller.getAllEditors)
-  .get("/editor-requests", adminAuth, controller.getEditorRequests)
-  .put("/editor-requests/:requestId", adminAuth, controller.handleEditorRequest)
-  .get("/:userId", adminAuth, controller.getUser)
-  .put("/:userId/role", adminAuth, controller.updateUserRole)
-  .put("/:userId/status", adminAuth, controller.updateUserStatus)
-  .put("/:userId/mosques", adminAuth, controller.updateUserMosques);
+    .get("/", adminAuth, controller.getAllUsers)
+    .get("/stats", adminAuth, controller.getUserStats)
+    .get("/editors", adminAuth, controller.getAllEditors)
+    .get("/editor-requests", adminAuth, controller.getEditorRequests)
+    .put("/editor-requests/:requestId", adminAuth, controller.handleEditorRequest)
+    .get("/:userId", adminAuth, controller.getUser)
+    .put("/:userId/role", adminAuth, controller.updateUserRole)
+    .put("/:userId/status", adminAuth, controller.updateUserStatus)
+    .put("/:userId/mosques", adminAuth, controller.updateUserMosques);
 
 module.exports = router;

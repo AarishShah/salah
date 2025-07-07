@@ -2,32 +2,32 @@ const User = require('../models/user.model');
 
 // Editor Services
 const getAssignedMosques = async (userId) => {
-  try {
-    const user = await User.findById(userId)
-      .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.address mosqueInfo.locality mosqueInfo.coordinates mosqueInfo.contactPerson isActive');
-    
-    if (!user) {
-      return {
-        status: 'failed',
-        code: 404,
-        message: 'User not found'
-      };
+    try {
+        const user = await User.findById(userId)
+            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.address mosqueInfo.locality mosqueInfo.coordinates mosqueInfo.contactPerson isActive');
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        return {
+            status: 'success',
+            mosques: user.assignedMosques
+        };
+    } catch (error) {
+        console.error('GetAssignedMosques error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch assigned mosques'
+        };
     }
-    
-    return {
-      status: 'success',
-      mosques: user.assignedMosques
-    };
-  } catch (error) {
-    console.error('GetAssignedMosques error:', error);
-    return {
-      status: 'failed',
-      code: 500,
-      message: 'Failed to fetch assigned mosques'
-    };
-  }
 };
 
 module.exports = {
-  getAssignedMosques,
+    getAssignedMosques,
 };

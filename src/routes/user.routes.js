@@ -11,10 +11,10 @@ const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 // These routes are for managing one's own profile and requests.
 
 router
-  .get("/profile", userAuth, controller.getProfile)
-  .put("/profile", userAuth, controller.updateProfile)
-  .delete("/account", userAuth, controller.deleteAccount)
-  .post("/editor-request", userAuth, controller.createEditorRequest)
-  .get("/editor-request/status", userAuth, controller.getEditorRequestStatus);
+    .get("/profile", userAuth, controller.getProfile)
+    .put("/profile", userAuth, controller.updateProfile)
+    .delete("/account", userAuth, controller.deleteAccount)
+    .post("/editor-request", userAuth, controller.createEditorRequest)
+    .get("/editor-request/status", userAuth, controller.getEditorRequestStatus);
 
 module.exports = router;
