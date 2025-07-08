@@ -29,7 +29,7 @@ const updateProfile = catchError(async (req, res) => {
 
 const deleteAccount = catchError(async (req, res) => {
     const { userId } = req.user;
-    const { password } = req.body; // For extra confirmation if needed
+    // const { password } = req.body; // For extra confirmation if needed
 
     const result = await userService.deleteAccount(userId);
 
