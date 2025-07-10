@@ -1,0 +1,50 @@
+name: Build & Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v3
+
+    - name: 🐋 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🔐 Login to Azure Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ secrets.AZURE_REGISTRY }}
+        username: ${{ secrets.AZURE_USERNAME }}
+        password: ${{ secrets.AZURE_PASSWORD }}
+
+    - name: 📦 Build and Push Docker Image
+      run: |
+        IMAGE=${{ secrets.AZURE_REGISTRY }}/myapp:dev-${{ github.sha }}
+        docker build -t $IMAGE .
+        docker push $IMAGE
+        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+    - name: 🛠 Deploy to Azure VM
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USERNAME }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          echo "Pulling image from ACR..."
+          docker login ${{ secrets.AZURE_REGISTRY }} -u ${{ secrets.AZURE_USERNAME }} -p ${{ secrets.AZURE_PASSWORD }}
+          docker pull $IMAGE
+
+          echo "Stopping existing container if exists..."
+          docker stop myapp || true
+          docker rm myapp || true
+
+          echo "Running container..."
+          docker run -d --name myapp --env-file .env -p 80:5000 $IMAGE
+
