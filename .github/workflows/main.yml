@@ -30,15 +30,6 @@ jobs:
         docker push $IMAGE
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-    - name: 📤 Copy .env to Azure VM
-      uses: appleboy/scp-action@v0.1.4
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USERNAME }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        source: ".env"
-        target: "/home/${{ secrets.VM_USERNAME }}/"
-
     - name: 🛠 Deploy to Azure VM
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -55,4 +46,4 @@ jobs:
           docker rm myapp || true
 
           echo "Running container..."
-          docker run -d --name myapp --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:5000 ${{ env.IMAGE }}
+          docker run -d --name salah --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:5000 ${{ env.IMAGE }}
