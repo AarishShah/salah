@@ -16,5 +16,5 @@ COPY src/ ./src/
 # Expose port
 EXPOSE 5000
 
-# Start the application
+# Start the applications
 CMD ["npm", "start"]
