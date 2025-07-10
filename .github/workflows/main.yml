@@ -30,6 +30,15 @@ jobs:
         docker push $IMAGE
         echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
+    - name: 📤 Copy .env to Azure VM
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USERNAME }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        source: ".env"
+        target: "/home/${{ secrets.VM_USERNAME }}/"
+
     - name: 🛠 Deploy to Azure VM
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -38,13 +47,12 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         script: |
           echo "Pulling image from ACR..."
-          docker login ${{ secrets.AZURE_REGISTRY }} -u ${{ secrets.AZURE_USERNAME }} -p ${{ secrets.AZURE_PASSWORD }}
-          docker pull $IMAGE
+          echo "${{ secrets.AZURE_PASSWORD }}" | docker login ${{ secrets.AZURE_REGISTRY }} -u ${{ secrets.AZURE_USERNAME }} --password-stdin
+          docker pull ${{ env.IMAGE }}
 
           echo "Stopping existing container if exists..."
           docker stop myapp || true
           docker rm myapp || true
 
           echo "Running container..."
-          docker run -d --name myapp --env-file .env -p 80:5000 $IMAGE
-
+          docker run -d --name myapp --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:5000 ${{ env.IMAGE }}
