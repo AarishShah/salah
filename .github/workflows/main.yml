@@ -3,7 +3,7 @@ name: Build & Deploy to Azure VM
 on:
   push:
     branches:
-      - dev
+      - stable
 
 jobs:
   build-and-deploy:
