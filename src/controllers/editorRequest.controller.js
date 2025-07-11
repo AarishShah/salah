@@ -1,4 +1,4 @@
-const editorService = require("../services/editor.service");
+const editorService = require("../services/editorRequest.service");
 const catchError = require("../utils/catchError");
 
 // Editor Controllers

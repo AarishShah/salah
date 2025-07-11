@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const controller = require("../controllers/editor.controller");
+const controller = require("../controllers/editorRequest.controller");
 const Auth = require("../middleware/auth.middleware");
 
 // Middleware for editors and admins
