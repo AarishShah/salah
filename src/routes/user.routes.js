@@ -1,14 +1,20 @@
-const router = require('express').Router();
-const userController = require('../controllers/user.controller');
-const Auth = require('../middleware/auth.middleware');
+const express = require("express");
+const router = express.Router();
 
-// User profile management
-router.get('/profile', Auth(), userController.getProfile);
-router.put('/profile', Auth(), userController.updateProfile);
-router.delete('/profile', Auth(), userController.deleteProfile);
+const controller = require("../controllers/user.controller");
+const Auth = require("../middleware/auth.middleware");
 
-// Session management
-router.get('/sessions', Auth(), userController.getSessions);
-router.delete('/sessions/:sessionId', Auth(), userController.deleteSession);
+// Middleware for any authenticated user
+const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
+
+// --- User Routes ---
+// These routes are for managing one's own profile and requests.
+
+router
+    .get("/profile", userAuth, controller.getProfile)
+    .put("/profile", userAuth, controller.updateProfile)
+    .delete("/account", userAuth, controller.deleteAccount)
+    .post("/editor-request", userAuth, controller.createEditorRequest)
+    .get("/editor-request/status", userAuth, controller.getEditorRequestStatus);
 
 module.exports = router;
