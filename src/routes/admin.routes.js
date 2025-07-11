@@ -11,7 +11,7 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 // Routes for admins to manage all users, roles, and requests.
 
 router
-    .get("/", adminAuth, controller.getAllUsers)
+    .get("/all", adminAuth, controller.getAllUsers)
     .get("/stats", adminAuth, controller.getUserStats)
     .get("/editors", adminAuth, controller.getAllEditors)
     .get("/editor-requests", adminAuth, controller.getEditorRequests)
