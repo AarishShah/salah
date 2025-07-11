@@ -453,6 +453,7 @@ const updateUserStatus = async (userId, isBlocked, blockedReason) => {
 
         if (isBlocked) {
             user.refreshTokens = []; // Clear tokens when blocking
+            user.assignedMosques = []; // Clear mosque assignments when blocking
         }
 
         await user.save();
