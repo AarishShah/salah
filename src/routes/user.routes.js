@@ -15,6 +15,7 @@ router
     .put("/profile", userAuth, controller.updateProfile)
     .delete("/account", userAuth, controller.deleteAccount)
     .post("/editor-request", userAuth, controller.createEditorRequest)
-    .get("/editor-request/status", userAuth, controller.getEditorRequestStatus);
+    .get("/editor-request/status", userAuth, controller.getEditorRequestStatus)
+    .patch("/phone-verification", userAuth, controller.verifyPhoneStatus);
 
 module.exports = router;

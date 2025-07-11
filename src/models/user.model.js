@@ -39,6 +39,11 @@ const userSchema = new mongoose.Schema({
         trim: true,
         sparse: true // Allows null/undefined values while maintaining uniqueness
     },
+    
+    phoneVerified: {
+        type: Boolean,
+        default: false
+    },
 
     language: {
         type: String,

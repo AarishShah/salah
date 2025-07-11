@@ -136,6 +136,15 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
             };
         }
 
+        if (!user.phoneVerified) {
+            return {
+                status: 'failed',
+                code: 403,
+                message: 'Number not verified'
+            };
+        }
+
+
         if (user.role !== 'user') {
             return {
                 status: 'failed',
@@ -255,10 +264,41 @@ const getEditorRequestStatus = async (userId) => {
     }
 };
 
+const verifyPhoneStatus = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        // For now, manually set phoneVerified to true (OTP logic will be added later)
+        user.phoneVerified = true;
+        await user.save();
+
+        return {
+            status: 'success',
+            message: 'Phone number verified successfully'
+        };
+    } catch (error) {
+        console.error('VerifyPhoneStatus error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to verify phone number'
+        };
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
     deleteAccount,
     createEditorRequest,
     getEditorRequestStatus,
+    verifyPhoneStatus,
 };
