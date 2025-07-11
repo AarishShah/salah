@@ -72,10 +72,24 @@ const getEditorRequestStatus = catchError(async (req, res) => {
     return res.json(result);
 });
 
+// Need to know phone verfication status
+const verifyPhoneStatus = catchError(async (req, res) => {
+    const { userId } = req.user;
+
+    const result = await userService.verifyPhoneStatus(userId);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 404).json(result);
+    }
+
+    return res.json(result);
+});
+
 module.exports = {
     getProfile,
     updateProfile,
     deleteAccount,
     createEditorRequest,
     getEditorRequestStatus,
+    verifyPhoneStatus,
 };
