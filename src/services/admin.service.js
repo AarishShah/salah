@@ -46,6 +46,278 @@ const getAllUsers = async (filters) => {
     }
 };
 
+const getUserStats = async () => {
+    try {
+        const stats = await User.aggregate([
+            {
+                $facet: {
+                    byRole: [
+                        {
+                            $group: {
+                                _id: '$role',
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ],
+                    byStatus: [
+                        {
+                            $group: {
+                                _id: null,
+                                total: { $sum: 1 },
+                                active: {
+                                    $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
+                                },
+                                blocked: {
+                                    $sum: { $cond: [{ $eq: ['$isBlocked', true] }, 1, 0] }
+                                }
+                            }
+                        }
+                    ],
+                    recentSignups: [
+                        {
+                            $match: {
+                                createdAt: {
+                                    $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+                                }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: {
+                                    $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+                                },
+                                count: { $sum: 1 }
+                            }
+                        },
+                        { $sort: { _id: -1 } },
+                        { $limit: 30 }
+                    ],
+                    editorStats: [
+                        {
+                            $match: { role: 'editor' }
+                        },
+                        {
+                            $lookup: {
+                                from: 'mosquetimingconfigs',  // CHANGED: Ensure correct collection name
+                                localField: 'assignedMosques',
+                                foreignField: '_id',
+                                as: 'mosques'
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalEditors: { $sum: 1 },
+                                totalAssignedMosques: { $sum: { $size: '$mosques' } }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+
+        const processedStats = {
+            roleDistribution: {},
+            statusCounts: {},
+            recentSignups: [],
+            editorInfo: {}
+        };
+
+        // Process role distribution
+        if (stats[0].byRole) {
+            stats[0].byRole.forEach(item => {
+                processedStats.roleDistribution[item._id] = item.count;
+            });
+        }
+
+        // Process status counts
+        if (stats[0].byStatus && stats[0].byStatus[0]) {
+            processedStats.statusCounts = {
+                total: stats[0].byStatus[0].total || 0,
+                active: stats[0].byStatus[0].active || 0,
+                blocked: stats[0].byStatus[0].blocked || 0,
+                inactive: (stats[0].byStatus[0].total || 0) - (stats[0].byStatus[0].active || 0)
+            };
+        }
+
+        // Process recent signups
+        processedStats.recentSignups = stats[0].recentSignups || [];
+
+        // Process editor stats
+        if (stats[0].editorStats && stats[0].editorStats[0]) {
+            processedStats.editorInfo = {
+                totalEditors: stats[0].editorStats[0].totalEditors || 0,
+                totalAssignedMosques: stats[0].editorStats[0].totalAssignedMosques || 0
+            };
+        }
+
+        // Get pending editor requests count
+        const pendingRequests = await EditorRequest.countDocuments({
+            status: 'pending',
+            isActive: true  // ADDED: Only count active pending requests
+        });
+        processedStats.pendingEditorRequests = pendingRequests;
+
+        return {
+            status: 'success',
+            stats: processedStats
+        };
+    } catch (error) {
+        console.error('GetUserStats error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch user statistics'
+        };
+    }
+};
+
+const getAllEditors = async () => {
+    try {
+        const editors = await User.find({ role: 'editor', isActive: true })
+            .select('name email assignedMosques createdAt')
+            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
+            .sort('name');
+
+        return {
+            status: 'success',
+            editors,
+            total: editors.length
+        };
+    } catch (error) {
+        console.error('GetAllEditors error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch editors'
+        };
+    }
+};
+
+const getEditorRequests = async (status) => {
+    try {
+        const query = { isActive: true };  // ADDED: Only get active requests
+        if (status) query.status = status;
+
+        const requests = await EditorRequest.find(query)
+            .populate('userId', 'name email profilePicture')
+            .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
+            .populate('reviewedBy', 'name email')
+            .sort('-createdAt');
+
+        return {
+            status: 'success',
+            requests,
+            total: requests.length
+        };
+    } catch (error) {
+        console.error('GetEditorRequests error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch editor requests'
+        };
+    }
+};
+
+const handleEditorRequest = async (requestId, action, adminId, rejectionReason) => {
+    try {
+        const request = await EditorRequest.findById(requestId)
+            .populate('userId')
+            .populate('requestedMosques');
+
+        if (!request) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Editor request not found'
+            };
+        }
+
+        if (!request.isActive) {  // ADDED: Check if request is active
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Request is no longer active'
+            };
+        }
+
+        if (request.status !== 'pending') {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Request has already been processed'
+            };
+        }
+
+        const user = request.userId;
+
+        if (!user || !user.isActive) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'User is not active'
+            };
+        }
+
+        if (action === 'approve') {
+            // Check if requested mosques are still available
+            const mosquesWithEditors = await User.find({
+                role: 'editor',
+                isActive: true,
+                assignedMosques: { $in: request.requestedMosques }
+            });
+
+            if (mosquesWithEditors.length > 0) {
+                return {
+                    status: 'failed',
+                    code: 400,
+                    message: 'Some requested mosques already have editors'
+                };
+            }
+
+            // Update user role and assign mosques
+            user.role = 'editor';
+            user.assignedMosques = request.requestedMosques;
+            await user.save();
+
+            // Update request
+            request.status = 'approved';
+            request.reviewedBy = adminId;
+            request.reviewedAt = new Date();
+            request.isActive = false;  // ADDED: Mark as inactive after processing
+            await request.save();
+
+            return {
+                status: 'success',
+                message: 'Editor request approved successfully',
+                user
+            };
+        } else {
+            // Reject request
+            request.status = 'rejected';
+            request.reviewedBy = adminId;
+            request.reviewedAt = new Date();
+            request.reviewNote = rejectionReason || 'No reason provided';  // CHANGED: from rejectionReason to reviewNote
+            request.isActive = false;  // ADDED: Mark as inactive after processing
+            await request.save();
+
+            return {
+                status: 'success',
+                message: 'Editor request rejected',
+                request
+            };
+        }
+    } catch (error) {
+        console.error('HandleEditorRequest error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to process editor request'
+        };
+    }
+};
+
 const getUser = async (userId) => {
     try {
         const user = await User.findById(userId)
@@ -268,286 +540,14 @@ const updateUserMosques = async (userId, mosqueIds) => {
     }
 };
 
-const getAllEditors = async () => {
-    try {
-        const editors = await User.find({ role: 'editor', isActive: true })
-            .select('name email assignedMosques createdAt')
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
-            .sort('name');
-
-        return {
-            status: 'success',
-            editors,
-            total: editors.length
-        };
-    } catch (error) {
-        console.error('GetAllEditors error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch editors'
-        };
-    }
-};
-
-const getEditorRequests = async (status) => {
-    try {
-        const query = { isActive: true };  // ADDED: Only get active requests
-        if (status) query.status = status;
-
-        const requests = await EditorRequest.find(query)
-            .populate('userId', 'name email profilePicture')
-            .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
-            .populate('reviewedBy', 'name email')
-            .sort('-createdAt');
-
-        return {
-            status: 'success',
-            requests,
-            total: requests.length
-        };
-    } catch (error) {
-        console.error('GetEditorRequests error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch editor requests'
-        };
-    }
-};
-
-const handleEditorRequest = async (requestId, action, adminId, rejectionReason) => {
-    try {
-        const request = await EditorRequest.findById(requestId)
-            .populate('userId')
-            .populate('requestedMosques');
-
-        if (!request) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'Editor request not found'
-            };
-        }
-
-        if (!request.isActive) {  // ADDED: Check if request is active
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Request is no longer active'
-            };
-        }
-
-        if (request.status !== 'pending') {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Request has already been processed'
-            };
-        }
-
-        const user = request.userId;
-
-        if (!user || !user.isActive) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'User is not active'
-            };
-        }
-
-        if (action === 'approve') {
-            // Check if requested mosques are still available
-            const mosquesWithEditors = await User.find({
-                role: 'editor',
-                isActive: true,
-                assignedMosques: { $in: request.requestedMosques }
-            });
-
-            if (mosquesWithEditors.length > 0) {
-                return {
-                    status: 'failed',
-                    code: 400,
-                    message: 'Some requested mosques already have editors'
-                };
-            }
-
-            // Update user role and assign mosques
-            user.role = 'editor';
-            user.assignedMosques = request.requestedMosques;
-            await user.save();
-
-            // Update request
-            request.status = 'approved';
-            request.reviewedBy = adminId;
-            request.reviewedAt = new Date();
-            request.isActive = false;  // ADDED: Mark as inactive after processing
-            await request.save();
-
-            return {
-                status: 'success',
-                message: 'Editor request approved successfully',
-                user
-            };
-        } else {
-            // Reject request
-            request.status = 'rejected';
-            request.reviewedBy = adminId;
-            request.reviewedAt = new Date();
-            request.reviewNote = rejectionReason || 'No reason provided';  // CHANGED: from rejectionReason to reviewNote
-            request.isActive = false;  // ADDED: Mark as inactive after processing
-            await request.save();
-
-            return {
-                status: 'success',
-                message: 'Editor request rejected',
-                request
-            };
-        }
-    } catch (error) {
-        console.error('HandleEditorRequest error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to process editor request'
-        };
-    }
-};
-
-const getUserStats = async () => {
-    try {
-        const stats = await User.aggregate([
-            {
-                $facet: {
-                    byRole: [
-                        {
-                            $group: {
-                                _id: '$role',
-                                count: { $sum: 1 }
-                            }
-                        }
-                    ],
-                    byStatus: [
-                        {
-                            $group: {
-                                _id: null,
-                                total: { $sum: 1 },
-                                active: {
-                                    $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
-                                },
-                                blocked: {
-                                    $sum: { $cond: [{ $eq: ['$isBlocked', true] }, 1, 0] }
-                                }
-                            }
-                        }
-                    ],
-                    recentSignups: [
-                        {
-                            $match: {
-                                createdAt: {
-                                    $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-                                }
-                            }
-                        },
-                        {
-                            $group: {
-                                _id: {
-                                    $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-                                },
-                                count: { $sum: 1 }
-                            }
-                        },
-                        { $sort: { _id: -1 } },
-                        { $limit: 30 }
-                    ],
-                    editorStats: [
-                        {
-                            $match: { role: 'editor' }
-                        },
-                        {
-                            $lookup: {
-                                from: 'mosquetimingconfigs',  // CHANGED: Ensure correct collection name
-                                localField: 'assignedMosques',
-                                foreignField: '_id',
-                                as: 'mosques'
-                            }
-                        },
-                        {
-                            $group: {
-                                _id: null,
-                                totalEditors: { $sum: 1 },
-                                totalAssignedMosques: { $sum: { $size: '$mosques' } }
-                            }
-                        }
-                    ]
-                }
-            }
-        ]);
-
-        const processedStats = {
-            roleDistribution: {},
-            statusCounts: {},
-            recentSignups: [],
-            editorInfo: {}
-        };
-
-        // Process role distribution
-        if (stats[0].byRole) {
-            stats[0].byRole.forEach(item => {
-                processedStats.roleDistribution[item._id] = item.count;
-            });
-        }
-
-        // Process status counts
-        if (stats[0].byStatus && stats[0].byStatus[0]) {
-            processedStats.statusCounts = {
-                total: stats[0].byStatus[0].total || 0,
-                active: stats[0].byStatus[0].active || 0,
-                blocked: stats[0].byStatus[0].blocked || 0,
-                inactive: (stats[0].byStatus[0].total || 0) - (stats[0].byStatus[0].active || 0)
-            };
-        }
-
-        // Process recent signups
-        processedStats.recentSignups = stats[0].recentSignups || [];
-
-        // Process editor stats
-        if (stats[0].editorStats && stats[0].editorStats[0]) {
-            processedStats.editorInfo = {
-                totalEditors: stats[0].editorStats[0].totalEditors || 0,
-                totalAssignedMosques: stats[0].editorStats[0].totalAssignedMosques || 0
-            };
-        }
-
-        // Get pending editor requests count
-        const pendingRequests = await EditorRequest.countDocuments({
-            status: 'pending',
-            isActive: true  // ADDED: Only count active pending requests
-        });
-        processedStats.pendingEditorRequests = pendingRequests;
-
-        return {
-            status: 'success',
-            stats: processedStats
-        };
-    } catch (error) {
-        console.error('GetUserStats error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch user statistics'
-        };
-    }
-};
-
 module.exports = {
     getAllUsers,
+    getUserStats,
+    getAllEditors,
+    getEditorRequests,
+    handleEditorRequest,
     getUser,
     updateUserRole,
     updateUserStatus,
     updateUserMosques,
-    getAllEditors,
-    getEditorRequests,
-    handleEditorRequest,
-    getUserStats,
 };
