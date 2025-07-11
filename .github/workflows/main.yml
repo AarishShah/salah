@@ -42,8 +42,8 @@ jobs:
           docker pull ${{ env.IMAGE }}
 
           echo "Stopping existing container if exists..."
-          docker stop myapp || true
-          docker rm myapp || true
+          docker stop salah || true
+          docker rm salah || true
 
           echo "Running container..."
           docker run -d --name salah --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:5000 ${{ env.IMAGE }}
