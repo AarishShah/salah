@@ -12,6 +12,7 @@ const userRoutes = require("./routes/user.routes");
 const editorRequestRoutes = require("./routes/editorRequest.routes");
 const adminRoutes = require("./routes/admin.routes");
 const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
+const baseTimingRoutes = require("./routes/baseTiming.routes");
 // const prayerTimingRoutes = require("./routes/prayerTiming.routes");
 // const editorRequestRoutes = require("./routes/editorRequest.routes");
 
@@ -51,6 +52,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/editorRequest', editorRequestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/timing-config', timingConfigRoutes);
+app.use('/api/base-timing', baseTimingRoutes);
 // app.use('/api/prayer-timings', prayerTimingRoutes);
 // app.use('/api/editor-requests', editorRequestRoutes);
 
