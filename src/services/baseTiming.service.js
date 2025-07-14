@@ -1,6 +1,6 @@
 const csv = require('csv-parser');
 const fs = require('fs');
-const BaseTiming = require('../models/BaseTiming.model');
+const BaseTiming = require('../models/baseTiming.model');
 const Location = require('../models/location.model');
 const { isValid, parseISO } = require('date-fns');
 
