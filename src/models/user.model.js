@@ -62,7 +62,7 @@ const userSchema = new mongoose.Schema({
     // For editors - which mosques they can edit
     assignedMosques: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'MosqueTimingConfig'
+        ref: 'Mosque'
     }],
 
     // Account Status
