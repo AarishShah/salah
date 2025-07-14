@@ -1,41 +1,70 @@
-// controllers/mosqueTimingConfig.controller.js
-const svc = require('../services/mosqueTimingConfig.service');
+const configService = require('../services/mosqueTimingConfig.service');
 const catchError = require('../utils/catchError');
 
-// create 
-const create = catchError(async (req, res) => {
-  const result = await svc.create(req.body, req.user.userId);
-  return res.status(result.status === 'success' ? 201 : result.code).json(result);
+const getConfig = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+
+    const result = await configService.getConfig(mosqueId);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 404).json(result);
+    }
+
+    return res.json(result);
 });
 
-//  list 
-const list = catchError(async (req, res) => {
-  const result = await svc.list(req.query);
-  return res.status(result.status === 'success' ? 200 : result.code).json(result);
+const createOrUpdateConfig = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { userId } = req.user;
+    const configData = req.body;
+
+    const result = await configService.createOrUpdateConfig(
+        mosqueId,
+        configData,
+        userId
+    );
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
 });
 
-//  get by id 
-const getById = catchError(async (req, res) => {
-  const result = await svc.getById(req.params.id);
-  return res.status(result.status === 'success' ? 200 : result.code).json(result);
+const generateTimings = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { userId } = req.user;
+    const { year } = req.body;
+
+    const result = await configService.generateTimings(
+        mosqueId,
+        year || new Date().getFullYear(),
+        userId
+    );
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
 });
 
-//  update 
-const update = catchError(async (req, res) => {
-  const result = await svc.update(req.params.id, req.body, req.user.userId);
-  return res.status(result.status === 'success' ? 200 : result.code).json(result);
-});
+const previewTimings = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { days = 7 } = req.body; // Preview first 7 days by default
 
-//  remove 
-const remove = catchError(async (req, res) => {
-  const result = await svc.remove(req.params.id, req.user.userId);
-  return res.status(result.status === 'success' ? 200 : result.code).json(result);
+    const result = await configService.previewTimings(mosqueId, days);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
 });
 
 module.exports = {
-  create,
-  list,
-  getById,
-  update,
-  remove
+    getConfig,
+    createOrUpdateConfig,
+    generateTimings,
+    previewTimings
 };
