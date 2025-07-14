@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const editorRequestSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'basetiming',
+        ref: 'User',
         required: true
     },
 
@@ -57,4 +57,4 @@ editorRequestSchema.index(
     }
 );
 
-module.exports = mongoose.model('loc', editorRequestSchema);
+module.exports = mongoose.model('EditorRequest', editorRequestSchema);
