@@ -229,7 +229,7 @@ const generateTimings = async (mosqueId, year, userId) => {
                 // Calculate adhan time
                 dailyTiming.adhanTimes[prayer] = adjustTime(
                     dailyTiming.prayers[prayer],
-                    -(prayerConfig.adhanGap || 10)
+                    -(prayerConfig.adhanGap || 15)
                 );
             }
 
