@@ -6,7 +6,7 @@ const getMosqueTimings = async (mosqueId, filters = {}) => {
     const { year, month, startDate, endDate } = filters;
     
     // Build query
-    const query = { mosqueId };
+    const query = { mosque: mosqueId };
     
     if (year) {
       query.year = parseInt(year);
@@ -16,7 +16,7 @@ const getMosqueTimings = async (mosqueId, filters = {}) => {
     
     const prayerTiming = await PrayerTiming.findOne(query)
       .populate('generatedBy', 'name email')
-      .populate('mosqueId', 'name address');
+      .populate('mosque', 'name address');
     
     if (!prayerTiming) {
       return {
@@ -47,7 +47,7 @@ const getMosqueTimings = async (mosqueId, filters = {}) => {
     
     return {
       status: 'success',
-      mosque: prayerTiming.mosqueId,
+      mosque: prayerTiming.mosque,
       year: prayerTiming.year,
       generatedAt: prayerTiming.generatedAt,
       generatedBy: prayerTiming.generatedBy,
@@ -70,7 +70,7 @@ const getTimingByDate = async (mosqueId, date) => {
     const year = searchDate.getFullYear();
     
     const prayerTiming = await PrayerTiming.findOne({
-      mosqueId,
+      mosque: mosqueId,
       year
     });
     
@@ -112,9 +112,9 @@ const getTimingByDate = async (mosqueId, date) => {
 const getMonthlyView = async (mosqueId, year, month) => {
   try {
     const prayerTiming = await PrayerTiming.findOne({
-      mosqueId,
+      mosque: mosqueId,
       year
-    }).populate('mosqueId', 'name address');
+    }).populate('mosque', 'name address');
     
     if (!prayerTiming) {
       return {
@@ -157,7 +157,7 @@ const getMonthlyView = async (mosqueId, year, month) => {
     
     return {
       status: 'success',
-      mosque: prayerTiming.mosqueId,
+      mosque: prayerTiming.mosque,
       year,
       month,
       weeks,
@@ -179,7 +179,7 @@ const updateSpecificDate = async (mosqueId, date, updateData, userId) => {
     const year = searchDate.getFullYear();
     
     const prayerTiming = await PrayerTiming.findOne({
-      mosqueId,
+      mosque: mosqueId,
       year
     });
     
@@ -239,6 +239,7 @@ const updateSpecificDate = async (mosqueId, date, updateData, userId) => {
     // Update the timing
     prayerTiming.timings[timingIndex] = {
       ...prayerTiming.timings[timingIndex],
+      date: prayerTiming.timings[timingIndex].date, // explicitly preserve date
       prayers: {
         ...prayerTiming.timings[timingIndex].prayers,
         ...prayers
@@ -277,7 +278,7 @@ const getTodayTiming = async (mosqueId) => {
     const year = today.getFullYear();
     
     const prayerTiming = await PrayerTiming.findOne({
-      mosqueId,
+      mosque: mosqueId,
       year
     });
     
@@ -349,7 +350,7 @@ const getTimingComparison = async (mosqueId, date) => {
     
     // Get mosque timing
     const prayerTiming = await PrayerTiming.findOne({
-      mosqueId,
+      mosque: mosqueId,
       year
     });
     
