@@ -1,13 +1,13 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
-const MosqueTimingConfig = require('../models/mosqueTimingConfig.model');
+const Mosque = require('../models/mosque.model'); 
 
 // User Services
 const getProfile = async (userId) => {
     try {
         const user = await User.findById(userId)
             .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address'); // CHANGED
+            .populate('assignedMosques', 'name locality address');
 
         if (!user) {
             return {
@@ -178,7 +178,7 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
         }
 
         // Validate mosque IDs
-        const validMosques = await MosqueTimingConfig.find({
+        const validMosques = await Mosque.find({
             _id: { $in: mosqueIds },
             isActive: true
         });
