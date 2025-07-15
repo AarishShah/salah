@@ -62,8 +62,8 @@ const getUserStats = async () => {
                     byStatus: [
                         {
                             $group: {
-                                _id: null,
-                                total: { $sum: 1 },
+                                _id: null, // Don't group, aggregate all users
+                                total: { $sum: 1 }, // TODO: This count is incorrect as it counts admin twice, once as user and once as admin
                                 active: {
                                     $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
                                 },
@@ -98,7 +98,7 @@ const getUserStats = async () => {
                         },
                         {
                             $lookup: {
-                                from: 'mosquetimingconfigs',  // CHANGED: Ensure correct collection name
+                                from: 'mosques',
                                 localField: 'assignedMosques',
                                 foreignField: '_id',
                                 as: 'mosques'
@@ -108,7 +108,7 @@ const getUserStats = async () => {
                             $group: {
                                 _id: null,
                                 totalEditors: { $sum: 1 },
-                                totalAssignedMosques: { $sum: { $size: '$mosques' } }
+                                totalAssignedMosques: { $sum: { $size: '$assignedMosques' } }
                             }
                         }
                     ]
@@ -201,7 +201,7 @@ const getEditorRequests = async (status) => {
 
         const requests = await EditorRequest.find(query)
             .populate('userId', 'name email profilePicture')
-            .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
+            .populate('requestedMosques', 'name locality address')
             .populate('reviewedBy', 'name email')
             .sort('-createdAt');
 
@@ -322,7 +322,7 @@ const getUser = async (userId) => {
     try {
         const user = await User.findById(userId)
             .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.address mosqueInfo.locality mosqueInfo.contactPerson');  // CHANGED
+            .populate('assignedMosques', 'name address locality contactPerson');
 
         if (!user) {
             return {
@@ -348,7 +348,7 @@ const getUser = async (userId) => {
 
 const updateUserRole = async (userId, newRole, mosqueIds) => {
     try {
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('-refreshTokens -__v');
 
         if (!user) {
             return {
@@ -475,7 +475,7 @@ const updateUserStatus = async (userId, isBlocked, blockedReason) => {
 
 const updateUserMosques = async (userId, mosqueIds) => {
     try {
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('-refreshTokens -__v');
 
         if (!user) {
             return {
@@ -494,7 +494,7 @@ const updateUserMosques = async (userId, mosqueIds) => {
         }
 
         // Validate mosques exist and are active
-        const validMosques = await MosqueTimingConfig.find({
+        const validMosques = await Mosque.find({
             _id: { $in: mosqueIds },
             isActive: true  // ADDED: Only consider active mosques
         });
