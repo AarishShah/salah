@@ -90,7 +90,7 @@ const calculatePrayerTime = (baseTime, prayerConfig, roundingInterval, previousT
 const getConfig = async (mosqueId) => {
     try {
         const config = await MosqueTimingConfig.findOne({
-            mosqueId,
+            mosque: mosqueId,
             isActive: true
         });
 
@@ -119,10 +119,10 @@ const getConfig = async (mosqueId) => {
 const createOrUpdateConfig = async (mosqueId, configData, userId) => {
     try {
         const config = await MosqueTimingConfig.findOneAndUpdate(
-            { mosqueId },
+            { mosque: mosqueId },
             {
                 ...configData,
-                mosqueId,
+                mosque: mosqueId,
                 updatedBy: userId,
                 $setOnInsert: { createdBy: userId }
             },
@@ -152,7 +152,7 @@ const generateTimings = async (mosqueId, year, userId) => {
     try {
         // Get configuration
         const config = await MosqueTimingConfig.findOne({
-            mosqueId,
+            mosque: mosqueId,
             isActive: true
         });
 
@@ -245,9 +245,9 @@ const generateTimings = async (mosqueId, year, userId) => {
 
         // Save generated timings
         const prayerTiming = await PrayerTiming.findOneAndUpdate(
-            { mosqueId, year },
+            { mosque: mosqueId, year },
             {
-                mosqueId,
+                mosque: mosqueId,
                 year,
                 timings: generatedTimings,
                 generatedFromConfig: config._id,
@@ -281,7 +281,7 @@ const previewTimings = async (mosqueId, days = 7) => {
     try {
         // Get configuration
         const config = await MosqueTimingConfig.findOne({
-            mosqueId,
+            mosque: mosqueId,
             isActive: true
         });
 
@@ -521,7 +521,7 @@ const timeToMinutes = (timeStr) => {
 // Get config history for a mosque
 const getConfigHistory = async (mosqueId) => {
     try {
-        const configs = await MosqueTimingConfig.find({ mosqueId })
+        const configs = await MosqueTimingConfig.find({ mosque: mosqueId })
             .sort({ updatedAt: -1 })
             .populate('createdBy', 'name email')
             .populate('updatedBy', 'name email')
@@ -553,7 +553,7 @@ const getConfigHistory = async (mosqueId) => {
 const duplicateConfig = async (sourceMosqueId, targetMosqueId, userId) => {
     try {
         const sourceConfig = await MosqueTimingConfig.findOne({
-            mosqueId: sourceMosqueId,
+            mosque: sourceMosqueId,
             isActive: true
         });
 
@@ -567,7 +567,7 @@ const duplicateConfig = async (sourceMosqueId, targetMosqueId, userId) => {
 
         // Create new config for target mosque
         const newConfig = new MosqueTimingConfig({
-            mosqueId: targetMosqueId,
+            mosque: targetMosqueId,
             prayers: sourceConfig.prayers,
             roundingInterval: sourceConfig.roundingInterval,
             jummah: sourceConfig.jummah,
