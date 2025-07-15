@@ -239,7 +239,7 @@ const getEditorRequestStatus = async (userId) => {
             isActive: true  // ADDED
         })
             .sort('-createdAt')
-            .populate('requestedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
+            .populate('requestedMosques', 'name locality address')
             .populate('reviewedBy', 'name email');
 
         if (!request) {

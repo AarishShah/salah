@@ -21,7 +21,7 @@ const getAllUsers = async (filters) => {
         const totalUsers = await User.countDocuments(query);
         const users = await User.find(query)
             .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality')  // CHANGED
+            .populate('assignedMosques', 'name locality')
             .sort('-createdAt')
             .limit(limit)
             .skip((page - 1) * limit);
@@ -176,7 +176,7 @@ const getAllEditors = async () => {
     try {
         const editors = await User.find({ role: 'editor', isActive: true })
             .select('name email assignedMosques createdAt')
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.locality mosqueInfo.address')  // CHANGED
+            .populate('assignedMosques', 'name locality address')
             .sort('name');
 
         return {
