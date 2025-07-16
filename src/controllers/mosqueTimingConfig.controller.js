@@ -34,12 +34,13 @@ const createOrUpdateConfig = catchError(async (req, res) => {
 const generateTimings = catchError(async (req, res) => {
     const { mosqueId } = req.params;
     const { userId } = req.user;
-    const { year } = req.body;
+    const { year, baseTimingId } = req.body;
 
     const result = await configService.generateTimings(
         mosqueId,
         year || new Date().getFullYear(),
-        userId
+        userId,
+        baseTimingId
     );
 
     if (result.status === 'failed') {

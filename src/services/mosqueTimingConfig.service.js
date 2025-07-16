@@ -148,7 +148,7 @@ const createOrUpdateConfig = async (mosqueId, configData, userId) => {
     }
 };
 
-const generateTimings = async (mosqueId, year, userId) => {
+const generateTimings = async (mosqueId, year, userId, baseTimingId) => {
     try {
         // Get configuration
         const config = await MosqueTimingConfig.findOne({
@@ -165,7 +165,7 @@ const generateTimings = async (mosqueId, year, userId) => {
         }
 
         // Get base timing document (contains all 366 days)
-        const baseTimingDoc = await BaseTiming.findOne().sort({ createdAt: -1 });
+        const baseTimingDoc = await BaseTiming.findById(baseTimingId);
 
         if (!baseTimingDoc || !baseTimingDoc.timings || baseTimingDoc.timings.length === 0) {
             return {
@@ -196,17 +196,21 @@ const generateTimings = async (mosqueId, year, userId) => {
         const generatedTimings = [];
         const previousTimes = {};
 
+        // we could optimise this by reducing the lookup to only the first 7 days of the year then simply adding 7 days for each iteration to get Friday Jummah timings. This way we don't have to use getDay() to check if it's Friday
         for (let i = 0; i < baseTimings.length; i++) {
-            const baseDay = baseTimings[i];
-            const dayOfWeek = new Date(baseDay.date).getDay();
-            const isFriday = dayOfWeek === 5;
+            const baseDay = baseTimings[i]; // Get current day's data
 
+            // Check if it's Friday
+            const dayOfWeek = new Date(baseDay.date).getDay(); // 0=Sunday, 1=Monday... 5=Friday
+            const isFriday = dayOfWeek === 5; // true if Friday
+
+            // Create structure for this day's timings
             const dailyTiming = {
-                date: baseDay.date,
+                date: baseDay.date,              // e.g., "2025-01-01"
                 prayers: {
-                    sunrise: baseDay.sunrise // Keep sunrise as-is
+                    sunrise: baseDay.sunrise     // Copy sunrise directly (no calculations)
                 },
-                adhanTimes: {}
+                adhanTimes: {}                   // Will be filled with adhan times later
             };
 
             // Process each prayer
@@ -237,7 +241,7 @@ const generateTimings = async (mosqueId, year, userId) => {
             if (isFriday && config.jummah && config.jummah.prayerTime) {
                 dailyTiming.prayers.dhuhr = config.jummah.prayerTime;
                 dailyTiming.adhanTimes.dhuhr = config.jummah.adhanTime ||
-                    adjustTime(config.jummah.prayerTime, -10);
+                    adjustTime(config.jummah.prayerTime, -15);
             }
 
             generatedTimings.push(dailyTiming);
@@ -598,6 +602,7 @@ module.exports = {
     createOrUpdateConfig,
     generateTimings,
     previewTimings,
+    getBaseTimingsSample,
     validateConfig,
     getConfigHistory,
     duplicateConfig
