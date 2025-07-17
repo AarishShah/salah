@@ -18,7 +18,7 @@ const mosqueSchema = new mongoose.Schema({
     contactPerson: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        default: null // Reference to assigned editor (User)
+        default: null
     },
     coordinates: {
         latitude: { type: Number },
@@ -26,8 +26,30 @@ const mosqueSchema = new mongoose.Schema({
     },
     sect: {
         type: String,
-        enum: ['sunni-hanafi', 'sunni-shafi', 'sunni-maliki', 'sunni-hanbali', 'shia'],
+        enum: ['sunni', 'shia'],
         required: true
+    },
+    schoolOfThought: {
+        type: String,
+        enum: ['hanafi', 'shafi', 'maliki', 'hanbali'],
+        required: function() {
+            return this.sect === 'sunni';
+        },
+        validate: {
+            validator: function(v) {
+                // If Shia, schoolOfThought should be null/undefined
+                if (this.sect === 'shia') return !v;
+                // If Sunni, schoolOfThought is required
+                if (this.sect === 'sunni') return !!v;
+                return true;
+            },
+            message: 'School of thought is required for Sunni sect only'
+        }
+    },
+    meetqatConfig: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'MeetqatConfig',
+        default: null
     },
     isActive: {
         type: Boolean,
