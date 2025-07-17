@@ -1,4 +1,4 @@
-const meetqatConfigService = require("../services/meetqatConfig.service");
+const meeqatConfigService = require("../services/meeqatConfig.service");
 const catchError = require("../utils/catchError");
 
 // Get config by mosque ID
@@ -6,7 +6,7 @@ const getConfigByMosqueId = catchError(async (req, res) => {
     const { mosqueId } = req.params;
     const { role, assignedMosques } = req.user;
 
-    const result = await meetqatConfigService.getConfigByMosqueId(mosqueId, role, assignedMosques);
+    const result = await meeqatConfigService.getConfigByMosqueId(mosqueId, role, assignedMosques);
 
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
@@ -21,7 +21,7 @@ const createConfig = catchError(async (req, res) => {
     const { userId, role, assignedMosques } = req.user;
     const configData = req.body;
 
-    const result = await meetqatConfigService.createConfig(mosqueId, configData, userId, role, assignedMosques);
+    const result = await meeqatConfigService.createConfig(mosqueId, configData, userId, role, assignedMosques);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -36,7 +36,7 @@ const updateConfigByMosqueId = catchError(async (req, res) => {
     const { userId, role, assignedMosques } = req.user;
     const updateData = req.body;
 
-    const result = await meetqatConfigService.updateConfigByMosqueId(mosqueId, updateData, userId, role, assignedMosques);
+    const result = await meeqatConfigService.updateConfigByMosqueId(mosqueId, updateData, userId, role, assignedMosques);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -50,7 +50,7 @@ const deleteConfigByMosqueId = catchError(async (req, res) => {
     const { mosqueId } = req.params;
     const { role, assignedMosques } = req.user;
 
-    const result = await meetqatConfigService.deleteConfigByMosqueId(mosqueId, role, assignedMosques);
+    const result = await meeqatConfigService.deleteConfigByMosqueId(mosqueId, role, assignedMosques);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);

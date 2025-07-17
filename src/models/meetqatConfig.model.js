@@ -30,7 +30,7 @@ const jamaatConfigSchema = new mongoose.Schema({
     }
 }, { _id: false });
 
-const meetqatConfigSchema = new mongoose.Schema({
+const meeqatConfigSchema = new mongoose.Schema({
     mosque: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Mosque',
@@ -87,6 +87,6 @@ const meetqatConfigSchema = new mongoose.Schema({
 });
 
 // Index for faster lookups
-meetqatConfigSchema.index({ mosque: 1 });
+meeqatConfigSchema.index({ mosque: 1 });
 
-module.exports = mongoose.model('MeetqatConfig', meetqatConfigSchema);
+module.exports = mongoose.model('MeeqatConfig', meeqatConfigSchema);

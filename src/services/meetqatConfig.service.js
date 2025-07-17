@@ -1,6 +1,5 @@
-const MeetqatConfig = require('../models/meetqatConfig.model');
+const MeeqatConfig = require('../models/meeqatConfig.model');
 const Mosque = require('../models/mosque.model');
-const mongoose = require('mongoose');
 
 // Helper function to check mosque access
 const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
@@ -31,7 +30,7 @@ const getConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
         }
 
         // Find config by mosque ID
-        const config = await MeetqatConfig.findOne({ mosque: mosqueId })
+        const config = await MeeqatConfig.findOne({ mosque: mosqueId })
             .populate('mosque', 'name address locality')
             .populate('createdBy', 'name email')
             .populate('updatedBy', 'name email');
@@ -81,7 +80,7 @@ const createConfig = async (mosqueId, configData, userId, role, assignedMosques)
         }
 
         // Check if config already exists
-        const existingConfig = await MeetqatConfig.findOne({ mosque: mosqueId });
+        const existingConfig = await MeeqatConfig.findOne({ mosque: mosqueId });
         if (existingConfig) {
             return {
                 status: 'failed',
@@ -91,7 +90,7 @@ const createConfig = async (mosqueId, configData, userId, role, assignedMosques)
         }
 
         // Create config
-        const newConfig = new MeetqatConfig({
+        const newConfig = new MeeqatConfig({
             mosque: mosqueId,
             createdBy: userId,
             ...configData
@@ -100,7 +99,7 @@ const createConfig = async (mosqueId, configData, userId, role, assignedMosques)
         await newConfig.save();
 
         // Update mosque with config reference
-        mosque.meetqatConfig = newConfig._id;
+        mosque.meeqatConfig = newConfig._id;
         await mosque.save();
 
         // Populate before returning
@@ -135,7 +134,7 @@ const updateConfigByMosqueId = async (mosqueId, updateData, userId, role, assign
         }
 
         // Find config by mosque ID
-        const config = await MeetqatConfig.findOne({ mosque: mosqueId });
+        const config = await MeeqatConfig.findOne({ mosque: mosqueId });
         if (!config) {
             return {
                 status: 'failed',
@@ -197,7 +196,7 @@ const deleteConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
         }
 
         // Find config
-        const config = await MeetqatConfig.findOne({ mosque: mosqueId });
+        const config = await MeeqatConfig.findOne({ mosque: mosqueId });
         if (!config) {
             return {
                 status: 'failed',
@@ -209,11 +208,11 @@ const deleteConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
         // Remove config reference from mosque
         await Mosque.findByIdAndUpdate(
             mosqueId,
-            { $unset: { meetqatConfig: 1 } }
+            { $unset: { meeqatConfig: 1 } }
         );
 
         // Delete config
-        await MeetqatConfig.deleteOne({ _id: config._id });
+        await MeeqatConfig.deleteOne({ _id: config._id });
 
         return {
             status: 'success',

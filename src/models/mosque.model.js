@@ -46,9 +46,9 @@ const mosqueSchema = new mongoose.Schema({
             message: 'School of thought is required for Sunni sect only'
         }
     },
-    meetqatConfig: {
+    meeqatConfig: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'MeetqatConfig',
+        ref: 'MeeqatConfig',
         default: null
     },
     isActive: {

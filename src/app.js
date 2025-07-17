@@ -15,7 +15,7 @@ const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
 const baseTimingRoutes = require("./routes/baseTiming.routes");
 const prayerTimingRoutes = require("./routes/prayerTiming.routes");
 const officialMeeqatRoutes = require("./routes/officialMeeqat.routes");
-const meetqatConfigRoutes = require("./routes/meetqatConfig.routes");
+const meeqatConfigRoutes = require("./routes/meeqatConfig.routes");
 
 // Initialize app
 const app = express();
@@ -56,7 +56,7 @@ app.use('/api/timing-config', timingConfigRoutes);
 app.use('/api/base-timing', baseTimingRoutes);
 app.use('/api/prayer-timings', prayerTimingRoutes);
 // app.use('/api/official-meeqat', officialMeeqatRoutes);
-app.use('/api/meetqat-config', meetqatConfigRoutes);
+app.use('/api/meeqat-config', meeqatConfigRoutes);
 
 // 404 handler
 app.use((req, res) => {
