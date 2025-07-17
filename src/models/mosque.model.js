@@ -20,9 +20,23 @@ const mosqueSchema = new mongoose.Schema({
         ref: 'User',
         default: null // Reference to assigned editor (User)
     },
+    // Remove when possible TODO @Aarish 
     coordinates: {
         latitude: { type: Number },
         longitude: { type: Number }
+    },
+    // GeoJSON location for geospatial queries
+    location: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point',
+            required: false
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            required: false
+        }
     },
     sect: {
         type: String,
@@ -39,5 +53,7 @@ const mosqueSchema = new mongoose.Schema({
 
 // Index for faster locality search
 mosqueSchema.index({ locality: 1 });
+// 2dsphere index for geospatial queries
+mosqueSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Mosque', mosqueSchema);
