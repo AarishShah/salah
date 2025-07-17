@@ -171,15 +171,12 @@ const generateTimings = async (mosqueId, year, userId, baseTimingId) => {
             return {
                 status: 'failed',
                 code: 404,
-                message: 'Base timings not found'
+                message: 'Base timings not found for the selected location/sect'
             };
         }
 
-        // Filter base timings for the requested year
-        const baseTimings = baseTimingDoc.timings.filter(timing => {
-            const timingYear = new Date(timing.date).getFullYear();
-            return timingYear === year;
-        });
+        // Use all 366 days from base timing
+        const baseTimings = baseTimingDoc.timings;
 
         if (baseTimings.length === 0) {
             return {
@@ -189,8 +186,14 @@ const generateTimings = async (mosqueId, year, userId, baseTimingId) => {
             };
         }
 
-        // Sort by date
-        baseTimings.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Sort by date (keeping month/day order)
+        baseTimings.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            // Compare by month and day only
+            return (dateA.getMonth() * 100 + dateA.getDate()) - 
+                (dateB.getMonth() * 100 + dateB.getDate());
+        });
 
         // Generate mosque timings
         const generatedTimings = [];
