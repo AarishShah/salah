@@ -16,6 +16,8 @@ router.get('/map/nearby', controller.getNearbyMosques); // this route is public,
     update mosque by editor and admin
     delete mosque by admin
 
+    keep user, editor, admin routes separate by comments above the routes
+    
 */ 
 
 
