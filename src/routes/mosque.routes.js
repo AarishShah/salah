@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/mosque.controller');
+const Auth = require('../middleware/auth.middleware');
+
+// Middleware for different roles
+const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
+const editorAuth = Auth({ allowedRoles: ['editor', 'admin'] });
+const adminAuth = Auth({ allowedRoles: ['admin'] });
 
 router.get('/map/nearby', controller.getNearbyMosques); // this route is public, should be user, editor, admin
 

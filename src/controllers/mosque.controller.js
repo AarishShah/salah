@@ -4,7 +4,7 @@ const catchError = require('../utils/catchError');
 const getNearbyMosques = catchError(async (req, res) => {
     const { lat, lng, radius, withRoutes } = req.query;
     if (!lat || !lng) {
-        return res.status(400).json({ status: 'failed', message: 'lat and lng are required' });
+        return res.status(400).json({ status: 'failed', code: 400, message: 'lat and lng are required' });
     }
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
@@ -17,4 +17,6 @@ const getNearbyMosques = catchError(async (req, res) => {
     return res.json(result);
 });
 
-module.exports = { getNearbyMosques }; 
+module.exports = {
+    getNearbyMosques,
+}; 
