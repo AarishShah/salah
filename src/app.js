@@ -14,6 +14,8 @@ const adminRoutes = require("./routes/admin.routes");
 const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
 const baseTimingRoutes = require("./routes/baseTiming.routes");
 const prayerTimingRoutes = require("./routes/prayerTiming.routes");
+const officialMeeqatRoutes = require("./routes/officialMeeqat.routes");
+const meeqatConfigRoutes = require("./routes/meeqatConfig.routes");
 const masjidMapRoutes = require('./routes/masjid.map.routes');
 
 // Initialize app
@@ -54,6 +56,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/timing-config', timingConfigRoutes);
 app.use('/api/base-timing', baseTimingRoutes);
 app.use('/api/prayer-timings', prayerTimingRoutes);
+// app.use('/api/official-meeqat', officialMeeqatRoutes);
+app.use('/api/meeqat-config', meeqatConfigRoutes);
 app.use('/api/masjid', masjidMapRoutes);
 
 // 404 handler

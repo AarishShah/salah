@@ -148,7 +148,7 @@ const createOrUpdateConfig = async (mosqueId, configData, userId) => {
     }
 };
 
-const generateTimings = async (mosqueId, year, userId) => {
+const generateTimings = async (mosqueId, year, userId, baseTimingId) => {
     try {
         // Get configuration
         const config = await MosqueTimingConfig.findOne({
@@ -165,21 +165,18 @@ const generateTimings = async (mosqueId, year, userId) => {
         }
 
         // Get base timing document (contains all 366 days)
-        const baseTimingDoc = await BaseTiming.findOne().sort({ createdAt: -1 });
+        const baseTimingDoc = await BaseTiming.findById(baseTimingId);
 
         if (!baseTimingDoc || !baseTimingDoc.timings || baseTimingDoc.timings.length === 0) {
             return {
                 status: 'failed',
                 code: 404,
-                message: 'Base timings not found'
+                message: 'Base timings not found for the selected location/sect'
             };
         }
 
-        // Filter base timings for the requested year
-        const baseTimings = baseTimingDoc.timings.filter(timing => {
-            const timingYear = new Date(timing.date).getFullYear();
-            return timingYear === year;
-        });
+        // Use all 366 days from base timing
+        const baseTimings = baseTimingDoc.timings;
 
         if (baseTimings.length === 0) {
             return {
@@ -189,24 +186,34 @@ const generateTimings = async (mosqueId, year, userId) => {
             };
         }
 
-        // Sort by date
-        baseTimings.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Sort by date (keeping month/day order)
+        baseTimings.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            // Compare by month and day only
+            return (dateA.getMonth() * 100 + dateA.getDate()) - 
+                (dateB.getMonth() * 100 + dateB.getDate());
+        });
 
         // Generate mosque timings
         const generatedTimings = [];
         const previousTimes = {};
 
+        // we could optimise this by reducing the lookup to only the first 7 days of the year then simply adding 7 days for each iteration to get Friday Jummah timings. This way we don't have to use getDay() to check if it's Friday
         for (let i = 0; i < baseTimings.length; i++) {
-            const baseDay = baseTimings[i];
-            const dayOfWeek = new Date(baseDay.date).getDay();
-            const isFriday = dayOfWeek === 5;
+            const baseDay = baseTimings[i]; // Get current day's data
 
+            // Check if it's Friday
+            const dayOfWeek = new Date(baseDay.date).getDay(); // 0=Sunday, 1=Monday... 5=Friday
+            const isFriday = dayOfWeek === 5; // true if Friday
+
+            // Create structure for this day's timings
             const dailyTiming = {
-                date: baseDay.date,
+                date: baseDay.date,              // e.g., "2025-01-01"
                 prayers: {
-                    sunrise: baseDay.sunrise // Keep sunrise as-is
+                    sunrise: baseDay.sunrise     // Copy sunrise directly (no calculations)
                 },
-                adhanTimes: {}
+                adhanTimes: {}                   // Will be filled with adhan times later
             };
 
             // Process each prayer
@@ -237,7 +244,7 @@ const generateTimings = async (mosqueId, year, userId) => {
             if (isFriday && config.jummah && config.jummah.prayerTime) {
                 dailyTiming.prayers.dhuhr = config.jummah.prayerTime;
                 dailyTiming.adhanTimes.dhuhr = config.jummah.adhanTime ||
-                    adjustTime(config.jummah.prayerTime, -10);
+                    adjustTime(config.jummah.prayerTime, -15);
             }
 
             generatedTimings.push(dailyTiming);
@@ -598,6 +605,7 @@ module.exports = {
     createOrUpdateConfig,
     generateTimings,
     previewTimings,
+    getBaseTimingsSample,
     validateConfig,
     getConfigHistory,
     duplicateConfig
