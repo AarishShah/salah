@@ -1,4 +1,4 @@
-const service = require('../services/masjid.map.service');
+const service = require('../services/mosque.service');
 const catchError = require('../utils/catchError');
 
 const getNearbyMosques = catchError(async (req, res) => {

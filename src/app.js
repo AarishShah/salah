@@ -16,7 +16,7 @@ const baseTimingRoutes = require("./routes/baseTiming.routes");
 const prayerTimingRoutes = require("./routes/prayerTiming.routes");
 const officialMeeqatRoutes = require("./routes/officialMeeqat.routes");
 const meeqatConfigRoutes = require("./routes/meeqatConfig.routes");
-const mosqueMapRoutes = require('./routes/masjid.map.routes');
+const mosqueMapRoutes = require('./routes/mosque.routes');
 
 // Initialize app
 const app = express();

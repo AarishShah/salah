@@ -20,11 +20,6 @@ const mosqueSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
-    // Remove when possible TODO @Aarish 
-    // coordinates: {
-    //     latitude: { type: Number },
-    //     longitude: { type: Number }
-    // },
     // GeoJSON location for geospatial queries
     coordinates: {
         type: {
