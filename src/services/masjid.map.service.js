@@ -31,8 +31,8 @@ async function getNearbyMasjids({ latitude, longitude, radius = 2, withRoutes = 
         locality: masjid.locality,
         contactPerson: masjid.contactPerson,
         coordinates: {
-            latitude: masjid.coordinates?.latitude ?? (masjid.location?.coordinates?.[1] ?? null),
-            longitude: masjid.coordinates?.longitude ?? (masjid.location?.coordinates?.[0] ?? null)
+            latitude: masjid.coordinates?.coordinates?.[1] ?? null,
+            longitude: masjid.coordinates?.coordinates?.[0] ?? null
         },
         displacement: masjid.displacement,
         route: null
@@ -44,8 +44,8 @@ async function getNearbyMasjids({ latitude, longitude, radius = 2, withRoutes = 
         const baseUrl = 'https://api.mapbox.com/directions/v5/mapbox/driving';
         const userLoc = `${longitude},${latitude}`;
         const routePromises = masjids.map(async (masjid) => {
-            const lng = masjid.coordinates?.longitude ?? (masjid.location?.coordinates?.[0] ?? null);
-            const lat = masjid.coordinates?.latitude ?? (masjid.location?.coordinates?.[1] ?? null);
+            const lat = masjid.coordinates?.coordinates?.[1] ?? null
+            const lng = masjid.coordinates?.coordinates?.[0] ?? null
             if (lng == null || lat == null) return null;
             const masjidLoc = `${lng},${lat}`;
             const url = `${baseUrl}/${userLoc};${masjidLoc}?geometries=polyline&access_token=${apiKey}`;
