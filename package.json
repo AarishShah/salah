@@ -6,7 +6,7 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
-  "author": "Aarish, Daawar, Mafooq, Tareef",
+  "author": "Aarish, Daawar, Mafooq, Mueed",
   "license": "ISC",
   "description": "",
   "dependencies": {

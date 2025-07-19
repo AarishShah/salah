@@ -1,9 +1,6 @@
-// rename to officialMeeqat
-
 const mongoose = require('mongoose');
 
 const dailyTimingSchema = new mongoose.Schema({
-    date: { type: Date, required: true }, // remove and do not use
     date_csv: { type: String, required: true }, // "1-Jan" format from CSV
     dayNumber: { type: Number, required: true, min: 1, max: 366 }, // Day of year
     fajr: { type: String, required: true }, // HH:MM
@@ -15,20 +12,45 @@ const dailyTimingSchema = new mongoose.Schema({
     isha: { type: String, required: true }
 }, { _id: false });
 
-const baseTimingSchema = new mongoose.Schema({
+const officialMeeqatSchema = new mongoose.Schema({
     locationName: {
         type: String,
         required: true,
         trim: true
     },
     coordinates: {
-        latitude: { type: Number },
-        longitude: { type: Number }
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point',
+            required: false
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            required: false
+        }
     },
     sect: {
         type: String,
-        enum: ['sunni-hanafi', 'sunni-shafi', 'sunni-maliki', 'sunni-hanbali', 'shia'],
+        enum: ['sunni', 'shia'],
         required: true
+    },
+    schoolOfThought: {
+        type: String,
+        enum: ['hanafi', 'shafi', 'maliki', 'hanbali'],
+        required: function () {
+            return this.sect === 'sunni';
+        },
+        validate: {
+            validator: function (v) {
+                // If Shia, schoolOfThought should be null/undefined
+                if (this.sect === 'shia') return !v;
+                // If Sunni, schoolOfThought is required
+                if (this.sect === 'sunni') return !!v;
+                return true;
+            },
+            message: 'School of thought is required for Sunni sect only'
+        }
     },
     publisher: {
         type: String,
@@ -48,5 +70,5 @@ const baseTimingSchema = new mongoose.Schema({
 });
 
 // Add compound index for location + sect uniqueness
-baseTimingSchema.index({ locationName: 1, sect: 1 }, { unique: true });
-module.exports = mongoose.model('BaseTiming', baseTimingSchema);
+officialMeeqatSchema.index({ locationName: 1, sect: 1, schoolOfThought: 1 }, { unique: true });
+module.exports = mongoose.model('OfficialMeeqat', officialMeeqatSchema);

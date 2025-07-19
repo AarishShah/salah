@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const customDailyTimingSchema = new mongoose.Schema({
+const mosqueDailyTimingSchema = new mongoose.Schema({
     date_csv: {
         type: String,
         required: true
@@ -38,7 +38,7 @@ const customDailyTimingSchema = new mongoose.Schema({
     editReason: String
 }, { _id: false });
 
-const customMeeqatSchema = new mongoose.Schema({
+const mosqueMeeqatSchema = new mongoose.Schema({
     mosque: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Mosque',
@@ -46,16 +46,16 @@ const customMeeqatSchema = new mongoose.Schema({
         unique: true
     },
 
-    // Source base timing used
-    sourceBaseTiming: { // meeqatBaseTiming
+    // Source official meeqat used
+    sourceOfficialMeeqat: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'BaseTiming',
+        ref: 'OfficialMeeqat',
         required: true
     },
 
-    // Configuration snapshot used for generation. To see what congif was used to generate this meeqat.
+    // Configuration snapshot used for generation
     configSnapshot: {
-        prayers: {
+        jamaat: {
             fajr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
             dhuhr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
             asr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
@@ -66,13 +66,13 @@ const customMeeqatSchema = new mongoose.Schema({
         jummah: {
             adhanTime: String,
             khutbahStartTime: String,
-            prayerTime: String
+            jamaatTime: String
         }
     },
 
     // 366 days of customized timings
     timings: {
-        type: [customDailyTimingSchema],
+        type: [mosqueDailyTimingSchema],
         validate: [arr => arr.length === 366, 'Timings array must have 366 entries']
     },
 
@@ -114,11 +114,11 @@ const customMeeqatSchema = new mongoose.Schema({
 });
 
 // Indexes
-customMeeqatSchema.index({ mosque: 1, isActive: 1 });
-customMeeqatSchema.index({ mosque: 1, version: -1 });
+mosqueMeeqatSchema.index({ mosque: 1, isActive: 1 });
+mosqueMeeqatSchema.index({ mosque: 1, version: -1 });
 
 // Methods
-customMeeqatSchema.methods.incrementVersion = function () {
+mosqueMeeqatSchema.methods.incrementVersion = function () {
     this.version += 1;
     return this.save();
 };
