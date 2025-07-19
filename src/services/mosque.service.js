@@ -85,6 +85,104 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
     }
 };
 
+const getMosqueById = async (id) => {
+    try {
+        const mosque = await Mosque.findById(id);
+        if (!mosque) {
+            return { status: 'failed', code: 404, message: 'Mosque not found' };
+        }
+        return { status: 'success', mosque };
+    } catch (error) {
+        console.error('getMosqueById error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to fetch mosque' };
+    }
+};
+
+const searchMosques = async (query) => {
+    try {
+        const { name, sect, locality } = query;
+        const filter = {};
+        if (name) filter.name = { $regex: name, $options: 'i' };
+        if (sect) filter.sect = sect;
+        if (locality) filter.locality = { $regex: locality, $options: 'i' };
+        const mosques = await Mosque.find(filter);
+        return { status: 'success', mosques };
+    } catch (error) {
+        console.error('searchMosques error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to search mosques' };
+    }
+};
+
+const getEditorAssignedMosques = async (userId) => {
+    try {
+        // Assuming User model has assignedMosques
+        const User = require('../models/user.model');
+        const user = await User.findById(userId).populate('assignedMosques');
+        if (!user) {
+            return { status: 'failed', code: 404, message: 'User not found' };
+        }
+        return { status: 'success', mosques: user.assignedMosques };
+    } catch (error) {
+        console.error('getEditorAssignedMosques error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to fetch assigned mosques' };
+    }
+};
+
+const getAllMosques = async () => {
+    try {
+        const mosques = await Mosque.find();
+        return { status: 'success', mosques };
+    } catch (error) {
+        console.error('getAllMosques error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to fetch all mosques' };
+    }
+};
+
+const createMosque = async (data) => {
+    try {
+        const mosque = new Mosque(data);
+        await mosque.save();
+        return { status: 'success', mosque };
+    } catch (error) {
+        console.error('createMosque error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to create mosque' };
+    }
+};
+
+const updateMosque = async (id, data, user) => {
+    try {
+        // Optionally, check user permissions here
+        const mosque = await Mosque.findByIdAndUpdate(id, data, { new: true });
+        if (!mosque) {
+            return { status: 'failed', code: 404, message: 'Mosque not found' };
+        }
+        return { status: 'success', mosque };
+    } catch (error) {
+        console.error('updateMosque error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to update mosque' };
+    }
+};
+
+const deleteMosque = async (id) => {
+    try {
+        const mosque = await Mosque.findByIdAndDelete(id);
+        if (!mosque) {
+            return { status: 'failed', code: 404, message: 'Mosque not found' };
+        }
+        return { status: 'success', mosque };
+    } catch (error) {
+        console.error('deleteMosque error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to delete mosque' };
+    }
+};
+
 module.exports = {
     getNearbyMosques,
+    getMosqueById,
+    searchMosques,
+    getEditorAssignedMosques,
+    getAllMosques,
+    createMosque,
+    updateMosque,
+    deleteMosque,
 }; 
