@@ -1,8 +1,8 @@
-const multer = require('multer');
-const path = require('path');
+const multer = require("multer");
 
+// Configure multer for CSV uploads
 const upload = multer({
-    dest: path.join(__dirname, '../../uploads'),
+    storage: multer.memoryStorage(),
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
             cb(null, true);
@@ -10,7 +10,8 @@ const upload = multer({
             cb(new Error('Only CSV files are allowed'));
         }
     },
-    limits: { fileSize: 100 * 1024 } // 100KB limit
+    limits: {
+        fileSize: 100 * 1024 // 100 KB limit
+    }
 });
-
-module.exports = { upload }; 
+exports.upload = upload;

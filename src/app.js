@@ -13,8 +13,11 @@ const editorRequestRoutes = require("./routes/editorRequest.routes");
 const adminRoutes = require("./routes/admin.routes");
 const timingConfigRoutes = require("./routes/mosqueTimingConfig.routes");
 const baseTimingRoutes = require("./routes/baseTiming.routes");
-// const prayerTimingRoutes = require("./routes/prayerTiming.routes");
-// const editorRequestRoutes = require("./routes/editorRequest.routes");
+const prayerTimingRoutes = require("./routes/prayerTiming.routes");
+const officialMeeqatRoutes = require("./routes/officialMeeqat.routes");
+const meeqatConfigRoutes = require("./routes/meeqatConfig.routes");
+const mosqueMeeqatRoutes = require("./routes/mosqueMeeqat.routes");
+const mosqueMapRoutes = require('./routes/mosque.routes');
 
 // Initialize app
 const app = express();
@@ -53,8 +56,11 @@ app.use('/api/editorRequest', editorRequestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/timing-config', timingConfigRoutes);
 app.use('/api/base-timing', baseTimingRoutes);
-// app.use('/api/prayer-timings', prayerTimingRoutes);
-// app.use('/api/editor-requests', editorRequestRoutes);
+app.use('/api/prayer-timings', prayerTimingRoutes);
+app.use('/api/official-meeqat', officialMeeqatRoutes);
+app.use('/api/meeqat-config', meeqatConfigRoutes);
+app.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
+app.use('/api/mosque', mosqueMapRoutes);
 
 // 404 handler
 app.use((req, res) => {

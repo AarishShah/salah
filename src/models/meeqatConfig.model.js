@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const prayerConfigSchema = new mongoose.Schema({
+const jamaatConfigSchema = new mongoose.Schema({
     delay: {
         type: Number,
         default: 0,
@@ -22,15 +22,15 @@ const prayerConfigSchema = new mongoose.Schema({
         type: Number,
         default: 10,
         min: 0,
-        max: 30
-    }, // minutes before prayer
+        max: 90
+    }, // minutes before jamaat
     roundingEnabled: {
         type: Boolean,
         default: true
     }
 }, { _id: false });
 
-const mosqueTimingConfigSchema = new mongoose.Schema({
+const meeqatConfigSchema = new mongoose.Schema({
     mosque: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Mosque',
@@ -38,13 +38,13 @@ const mosqueTimingConfigSchema = new mongoose.Schema({
         unique: true
     },
 
-    // Prayer configurations
-    prayers: {
-        fajr: { type: prayerConfigSchema, default: () => ({}) },
-        dhuhr: { type: prayerConfigSchema, default: () => ({}) },
-        asr: { type: prayerConfigSchema, default: () => ({}) },
-        maghrib: { type: prayerConfigSchema, default: () => ({}) },
-        isha: { type: prayerConfigSchema, default: () => ({}) }
+    // jamaat configurations
+    jamaat: {
+        fajr: { type: jamaatConfigSchema, default: () => ({}) },
+        dhuhr: { type: jamaatConfigSchema, default: () => ({}) },
+        asr: { type: jamaatConfigSchema, default: () => ({}) },
+        maghrib: { type: jamaatConfigSchema, default: () => ({}) },
+        isha: { type: jamaatConfigSchema, default: () => ({}) }
     },
 
     // Global rounding interval (5, 10, or 15 minutes)
@@ -54,7 +54,7 @@ const mosqueTimingConfigSchema = new mongoose.Schema({
         default: 5
     },
 
-    // Jummah (Friday) prayer settings
+    // Jummah (Friday) salah settings
     jummah: {
         adhanTime: {
             type: String,
@@ -67,7 +67,7 @@ const mosqueTimingConfigSchema = new mongoose.Schema({
             }
         },
         khutbahStartTime: String,
-        prayerTime: String
+        jamaatTime: String
     },
 
     // Metadata
@@ -87,6 +87,6 @@ const mosqueTimingConfigSchema = new mongoose.Schema({
 });
 
 // Index for faster lookups
-mosqueTimingConfigSchema.index({ mosque: 1 });
+meeqatConfigSchema.index({ mosque: 1 });
 
-module.exports = mongoose.model('MosqueTimingConfig', mosqueTimingConfigSchema);
+module.exports = mongoose.model('MeeqatConfig', meeqatConfigSchema);
