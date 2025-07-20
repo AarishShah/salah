@@ -61,14 +61,29 @@ const officialMeeqatSchema = new mongoose.Schema({
         type: [dailyTimingSchema],
         validate: [arr => arr.length === 366, 'Timings array must have 366 entries']
     },
-    uploadedBy: {
+    createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    createdAt: { type: Date, default: Date.now }
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
+}, {
+    timestamps: true
 });
 
-// Add compound index for location + sect uniqueness
-officialMeeqatSchema.index({ locationName: 1, sect: 1, schoolOfThought: 1 }, { unique: true });
+// For Sunni entries
+officialMeeqatSchema.index({ locationName: 1, sect: 1, schoolOfThought: 1 }, { 
+    unique: true,
+    partialFilterExpression: { sect: 'sunni' }
+});
+
+// For Shia entries
+officialMeeqatSchema.index({ locationName: 1, sect: 1 }, { 
+    unique: true,
+    partialFilterExpression: { sect: 'shia' }
+});
+
 module.exports = mongoose.model('OfficialMeeqat', officialMeeqatSchema);
