@@ -20,9 +20,18 @@ const mosqueSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
+    // GeoJSON location for geospatial queries
     coordinates: {
-        latitude: { type: Number },
-        longitude: { type: Number }
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point',
+            required: true
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            required: true
+        }
     },
     sect: {
         type: String,
@@ -63,7 +72,16 @@ const mosqueSchema = new mongoose.Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: false
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 }, {
     timestamps: true
@@ -71,5 +89,9 @@ const mosqueSchema = new mongoose.Schema({
 
 // Index for faster locality search
 mosqueSchema.index({ locality: 1 });
+// 2dsphere index for geospatial queries
+mosqueSchema.index({ coordinates: '2dsphere' });
+
+mosqueSchema.index({ 'coordinates.coordinates': 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Mosque', mosqueSchema);
