@@ -427,8 +427,8 @@ const deleteMosqueMeeqatByMosqueId = async (mosqueId, role, assignedMosques) => 
         // await mosqueMeeqat.save();
 
         // Remove the document from the collection permanently
-        const hi = await MosqueMeeqat.deleteOne({ _id: mosqueMeeqat._id });
-        console.log('Delete result:', hi);
+        await MosqueMeeqat.deleteOne({ _id: mosqueMeeqat._id });
+        
         return {
             status: 'success',
             message: 'MosqueMeeqat deactivated successfully'
