@@ -26,11 +26,11 @@ const mosqueSchema = new mongoose.Schema({
             type: String,
             enum: ['Point'],
             default: 'Point',
-            required: false
+            required: true
         },
         coordinates: {
             type: [Number], // [longitude, latitude]
-            required: false
+            required: true
         }
     },
     sect: {
@@ -57,7 +57,7 @@ const mosqueSchema = new mongoose.Schema({
     },
     officialMeeqat: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'officialMeeqat',
+        ref: 'OfficialMeeqat',
         default: null
     },
     meeqatConfig: {
@@ -72,7 +72,16 @@ const mosqueSchema = new mongoose.Schema({
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: false
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }
 }, {
     timestamps: true
@@ -82,5 +91,7 @@ const mosqueSchema = new mongoose.Schema({
 mosqueSchema.index({ locality: 1 });
 // 2dsphere index for geospatial queries
 mosqueSchema.index({ coordinates: '2dsphere' });
+
+mosqueSchema.index({ 'coordinates.coordinates': 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Mosque', mosqueSchema);
