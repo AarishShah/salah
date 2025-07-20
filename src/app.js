@@ -57,7 +57,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/timing-config', timingConfigRoutes);
 app.use('/api/base-timing', baseTimingRoutes);
 app.use('/api/prayer-timings', prayerTimingRoutes);
-// app.use('/api/official-meeqat', officialMeeqatRoutes);
+app.use('/api/official-meeqat', officialMeeqatRoutes);
 app.use('/api/meeqat-config', meeqatConfigRoutes);
 app.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
 app.use('/api/mosque', mosqueMapRoutes);
