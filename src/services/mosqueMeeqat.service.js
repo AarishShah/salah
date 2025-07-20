@@ -1,7 +1,5 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
-const MeeqatConfig = require('../models/meeqatConfig.model');
-const OfficialMeeqat = require('../models/officialMeeqat.model');
 
 // Helper function to check mosque access
 const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
