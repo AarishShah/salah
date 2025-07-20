@@ -48,7 +48,7 @@ const mosqueSchema = new mongoose.Schema({
     },
     officialMeeqat: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'officialMeeqat',
+        ref: 'OfficialMeeqat',
         default: null
     },
     meeqatConfig: {
