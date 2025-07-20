@@ -4,7 +4,7 @@ const User = require('../models/user.model');
 const getAssignedMosques = async (userId) => {
     try {
         const user = await User.findById(userId)
-            .populate('assignedMosques', 'mosqueInfo.name mosqueInfo.address mosqueInfo.locality mosqueInfo.coordinates mosqueInfo.contactPerson isActive');
+            .populate('assignedMosques', 'name address locality coordinates sect contactPerson isActive');
 
         if (!user) {
             return {

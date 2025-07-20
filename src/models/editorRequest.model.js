@@ -10,7 +10,7 @@ const editorRequestSchema = new mongoose.Schema({
     // Mosques they want to manage
     requestedMosques: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'MosqueTimingConfig',
+        ref: 'Mosque',
         required: true
     }],
 
