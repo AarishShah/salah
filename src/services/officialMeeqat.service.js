@@ -79,17 +79,17 @@ const validateCSVData = (data) => {
 
         // Uncomment this section when our csv data is ready for time sequence validation
         // Validate time sequence
-        const times = prayers.map(p => {
-            const [h, m] = row[p].split(':').map(Number);
-            return h * 60 + m;
-        });
+        // const times = prayers.map(p => {
+        //     const [h, m] = row[p].split(':').map(Number);
+        //     return h * 60 + m;
+        // });
 
-        for (let i = 1; i < times.length; i++) {
-            if (times[i] <= times[i - 1]) {
-                errors.push(`Row ${rowNum}: ${prayers[i]} time must be after ${prayers[i - 1]}`);
-                return { isValid: false, errors }; // Stop on first error
-            }
-        }
+        // for (let i = 1; i < times.length; i++) {
+        //     if (times[i] <= times[i - 1]) {
+        //         errors.push(`Row ${rowNum}: ${prayers[i]} time must be after ${prayers[i - 1]}`);
+        //         return { isValid: false, errors }; // Stop on first error
+        //     }
+        // }
     }
 
     return {
