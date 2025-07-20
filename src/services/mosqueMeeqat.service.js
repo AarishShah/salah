@@ -9,34 +9,124 @@ const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
     return assignedMosques.some(id => id.toString() === mosqueId.toString());
 };
 
+// Helper function to add/subtract minutes from time string
+const adjustTime = (timeStr, minutes) => {
+    const [hours, mins] = timeStr.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins + minutes;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMins = totalMinutes % 60;
+    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
+};
+
+// Round time based on interval and direction
+const roundTime = (timeStr, interval, direction) => {
+    const [hours, mins] = timeStr.split(':').map(Number);
+    const totalMinutes = hours * 60 + mins;
+
+    let roundedMinutes;
+    if (direction === 'up') {
+        roundedMinutes = Math.ceil(totalMinutes / interval) * interval;
+    } else if (direction === 'down') {
+        roundedMinutes = Math.floor(totalMinutes / interval) * interval;
+    } else { // nearest
+        roundedMinutes = Math.round(totalMinutes / interval) * interval;
+    }
+
+    const newHours = Math.floor(roundedMinutes / 60) % 24;
+    const newMins = roundedMinutes % 60;
+
+    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
+};
+
+// Convert time string to minutes for comparison
+const timeToMinutes = (timeStr) => {
+    const [hours, mins] = timeStr.split(':').map(Number);
+    return hours * 60 + mins;
+};
+
 // Helper function to apply config rules to generate timings
 const generateTimings = (officialTimings, config) => {
-    // This is where you'd implement the logic to:
-    // 1. Apply delays/fixed times
-    // 2. Apply rounding rules
-    // 3. Calculate adhan times
-    // Returns 366 days of processed timings
-    return officialTimings.map(day => {
-        // Simplified example - implement full logic here
+    // Track previous day's trends for stable days
+    const trendHistory = {
+        fajr: null,
+        dhuhr: null,
+        asr: null,
+        maghrib: null,
+        isha: null
+    };
+
+    return officialTimings.map((day, index) => {
         const processedDay = {
             date_csv: day.date_csv,
             dayNumber: day.dayNumber,
-            fajr: day.fajr, // Apply config.jamaat.fajr rules
-            sunrise: day.sunrise,
-            zenith: day.zenith,
-            dhuhr: day.dhuhr, // Apply config.jamaat.dhuhr rules
-            asr: day.asr, // Apply config.jamaat.asr rules
-            maghrib: day.maghrib, // Apply config.jamaat.maghrib rules
-            isha: day.isha, // Apply config.jamaat.isha rules
-            adhanTimes: {
-                fajr: day.fajr, // Calculate based on adhanGap
-                dhuhr: day.dhuhr,
-                asr: day.asr,
-                maghrib: day.maghrib,
-                isha: day.isha
-            },
+            sunrise: day.sunrise, // No adjustment
+            zenith: day.zenith,   // No adjustment
             isManuallyEdited: false
         };
+
+        const previousDay = index > 0 ? officialTimings[index - 1] : null;
+
+        // Process each prayer time
+        ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].forEach(prayer => {
+            const prayerConfig = config.jamaat[prayer];
+            let jamaatTime;
+
+            // 1. Apply fixed time or delay
+            if (prayerConfig.fixedTime) {
+                jamaatTime = prayerConfig.fixedTime;
+            } else {
+                // Apply delay to official time
+                jamaatTime = adjustTime(day[prayer], prayerConfig.delay || 0);
+
+                // 2. Apply rounding if enabled
+                if (prayerConfig.roundingEnabled && config.roundingInterval) {
+                    let direction;
+
+                    if (previousDay) {
+                        // Calculate previous day's time with same delay
+                        const previousAdjusted = adjustTime(previousDay[prayer], prayerConfig.delay || 0);
+                        const currentMinutes = timeToMinutes(jamaatTime);
+                        const previousMinutes = timeToMinutes(previousAdjusted);
+
+                        if (currentMinutes > previousMinutes) {
+                            // Increasing trend - round down to resist
+                            direction = 'down';
+                            trendHistory[prayer] = 'increasing';
+                        } else if (currentMinutes < previousMinutes) {
+                            // Decreasing trend - round up to resist
+                            direction = 'up';
+                            trendHistory[prayer] = 'decreasing';
+                        } else {
+                            // Stable - use previous trend
+                            if (trendHistory[prayer] === 'increasing') {
+                                direction = 'down';
+                            } else if (trendHistory[prayer] === 'decreasing') {
+                                direction = 'up';
+                            } else {
+                                direction = 'nearest';
+                            }
+                        }
+                    } else {
+                        // First day - round to nearest
+                        direction = 'nearest';
+                    }
+
+                    jamaatTime = roundTime(jamaatTime, config.roundingInterval, direction);
+                }
+            }
+
+            processedDay[prayer] = jamaatTime;
+        });
+
+        // 3. Calculate adhan times
+        processedDay.adhanTimes = {
+            fajr: adjustTime(processedDay.fajr, -(config.jamaat.fajr.adhanGap || 15)),
+            dhuhr: adjustTime(processedDay.dhuhr, -(config.jamaat.dhuhr.adhanGap || 15)),
+            asr: adjustTime(processedDay.asr, -(config.jamaat.asr.adhanGap || 15)),
+            maghrib: adjustTime(processedDay.maghrib, -(config.jamaat.maghrib.adhanGap || 15)),
+            isha: adjustTime(processedDay.isha, -(config.jamaat.isha.adhanGap || 15))
+        };
+
         return processedDay;
     });
 };
