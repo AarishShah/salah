@@ -180,7 +180,7 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
         // Validate mosque IDs
         const validMosques = await Mosque.find({
             _id: { $in: mosqueIds },
-            isActive: true
+            // isActive: true (Later change it to true)
         });
 
         if (validMosques.length !== mosqueIds.length) {
