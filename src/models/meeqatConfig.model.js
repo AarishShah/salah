@@ -86,7 +86,4 @@ const meeqatConfigSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for faster lookups
-meeqatConfigSchema.index({ mosque: 1 });
-
 module.exports = mongoose.model('MeeqatConfig', meeqatConfigSchema);
