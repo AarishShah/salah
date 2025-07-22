@@ -12,6 +12,9 @@ router
     .get('/map/nearby', userAuth, controller.getNearbyMosques)
     .get('/search', userAuth, controller.searchMosques)
     .get('/:id', userAuth, controller.getMosqueById);
+
+// For everybody get id's of multiple mosque
+// Create a route to select official Meeqat of a mosque
     
 // --- Admin routes ---
 router

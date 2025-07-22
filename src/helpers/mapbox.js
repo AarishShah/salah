@@ -2,7 +2,7 @@ const axios = require('axios');
 
 async function getRoutesForMosques(userLocation, mosqueLocations) {
     const apiKey = process.env.MAPBOX_API_KEY;
-    const baseUrl = 'https://api.mapbox.com/directions/v5/mapbox/driving';
+    const baseUrl = 'https://api.mapbox.com/directions/v5/mapbox/walking';
     const userLoc = `${userLocation[0]},${userLocation[1]}`;
     const routePromises = mosqueLocations.map(async (mosque) => {
         const lat = mosque.coordinates?.coordinates?.[1] ?? null;

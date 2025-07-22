@@ -45,7 +45,6 @@ const editorRequestSchema = new mongoose.Schema({
 });
 
 // Indexes
-editorRequestSchema.index({ userId: 1, status: 1 });
 editorRequestSchema.index({ status: 1, createdAt: -1 });
 
 // Prevent multiple pending requests from same user

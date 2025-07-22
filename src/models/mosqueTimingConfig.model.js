@@ -86,7 +86,4 @@ const mosqueTimingConfigSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for faster lookups
-mosqueTimingConfigSchema.index({ mosque: 1 });
-
 module.exports = mongoose.model('MosqueTimingConfig', mosqueTimingConfigSchema);

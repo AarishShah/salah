@@ -12,8 +12,7 @@ const mosqueSchema = new mongoose.Schema({
     },
     locality: {
         type: String,
-        required: true,
-        index: true
+        required: true
     },
     contactPerson: {
         type: mongoose.Schema.Types.ObjectId,
