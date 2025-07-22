@@ -71,10 +71,34 @@ const deleteMosqueMeeqatByMosqueId = catchError(async (req, res) => {
     return res.json(result);
 });
 
+// Add this to your controller file
+const getMosqueMeeqatHTML = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { month, year } = req.query; // Optional filters
+
+    const result = await mosqueMeeqatService.getMosqueMeeqatHTML(mosqueId, { month, year });
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 404).send(`
+            <html>
+                <head><title>Error</title></head>
+                <body>
+                    <h1>Error</h1>
+                    <p>${result.message}</p>
+                </body>
+            </html>
+        `);
+    }
+
+    res.set('Content-Type', 'text/html');
+    return res.send(result.html);
+});
+
 module.exports = {
     getMosqueMeeqatByMosqueId,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
     updateMosqueMeeqatByMosqueId,
-    deleteMosqueMeeqatByMosqueId
+    deleteMosqueMeeqatByMosqueId,
+    getMosqueMeeqatHTML
 };

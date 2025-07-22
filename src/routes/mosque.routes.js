@@ -14,7 +14,10 @@ router
     .get('/:id', userAuth, controller.getMosqueById);
 
 // For everybody get id's of multiple mosque
-// Create a route to select official Meeqat of a mosque
+
+// --- Editor routes ---
+router
+    .patch('/editor/:id/official-meeqat', editorAuth, controller.setOfficialMeeqat);
     
 // --- Admin routes ---
 router

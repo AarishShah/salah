@@ -79,6 +79,29 @@ const searchMosques = catchError(async (req, res) => {
     return res.json(result);
 });
 
+const setOfficialMeeqat = catchError(async (req, res) => {
+    const { id } = req.params;
+    const { officialMeeqatId } = req.body;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    if (!officialMeeqatId) {
+        return res.status(400).json({
+            status: 'failed',
+            code: 400,
+            message: 'officialMeeqatId is required'
+        });
+    }
+
+    const result = await service.setOfficialMeeqat(id, officialMeeqatId, userId, userRole);
+    
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+    
+    return res.json(result);
+});
+
 // Properly implemented
 const createMosque = catchError(async (req, res) => {
     // Only allow these fields from admin
@@ -111,6 +134,7 @@ module.exports = {
     getNearbyMosques,
     getMosqueById,
     searchMosques,
+    setOfficialMeeqat,
     createMosque,
     softDeleteMosque,
 }; 

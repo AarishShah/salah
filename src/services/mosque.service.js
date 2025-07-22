@@ -1,5 +1,6 @@
 const Mosque = require('../models/mosque.model');
 const User = require('../models/user.model');
+const OfficialMeeqat = require('../models/officialMeeqat.model');
 const { getRoutesForMosques } = require('../helpers/mapbox');
 
 // Fetch mosques within a radius (in km) from given coordinates
@@ -115,6 +116,80 @@ const searchMosques = async (query) => {
     }
 };
 
+const setOfficialMeeqat = async (mosqueId, officialMeeqatId, userId, userRole) => {
+    try {
+        // Fetch mosque
+        const mosque = await Mosque.findById(mosqueId);
+        if (!mosque) {
+            return { status: 'failed', code: 404, message: 'Mosque not found' };
+        }
+
+        // Check if editor is assigned to this mosque (if user is editor)
+        if (userRole === 'editor') {
+            const user = await User.findById(userId);
+            const isAssigned = user.assignedMosques.some(
+                mId => mId.toString() === mosque._id.toString()
+            );
+            if (!isAssigned) {
+                return {
+                    status: 'failed',
+                    code: 403,
+                    message: 'You are not authorized to update this mosque'
+                };
+            }
+        }
+
+        // Fetch official meeqat
+        const officialMeeqat = await OfficialMeeqat.findById(officialMeeqatId);
+        if (!officialMeeqat) {
+            return { status: 'failed', code: 404, message: 'Official Meeqat not found' };
+        }
+
+        // Validate sect compatibility
+        if (mosque.sect !== officialMeeqat.sect) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: `Sect mismatch: Mosque is ${mosque.sect} but Official Meeqat is ${officialMeeqat.sect}`
+            };
+        }
+
+        // Validate school of thought compatibility (for Sunni only)
+        if (mosque.sect === 'sunni' && mosque.schoolOfThought !== officialMeeqat.schoolOfThought) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: `School of thought mismatch: Mosque follows ${mosque.schoolOfThought} but Official Meeqat is for ${officialMeeqat.schoolOfThought}`
+            };
+        }
+
+        // Update mosque with official meeqat
+        mosque.officialMeeqat = officialMeeqatId;
+        mosque.updatedBy = userId;
+        
+        // Check if mosque can be activated
+        // A mosque is active if it has at least one timing source and a contact person
+        // if (mosque.contactPerson && (mosque.officialMeeqat || mosque.meeqatConfig || mosque.mosqueMeeqat)) {
+        //     mosque.isActive = true;
+        // }
+
+        await mosque.save();
+
+        // Populate the official meeqat details in response
+        await mosque.populate('officialMeeqat', 'locationName publisher');
+
+        return {
+            status: 'success',
+            message: 'Official Meeqat successfully linked to mosque',
+            mosque
+        };
+
+    } catch (error) {
+        console.error('setOfficialMeeqat error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to set official meeqat' };
+    }
+};
+
 const createMosque = async (data) => {
     try {
         // Only allow these fields
@@ -194,6 +269,7 @@ module.exports = {
     getNearbyMosques,
     getMosqueById,
     searchMosques,
+    setOfficialMeeqat,
     createMosque,
     softDeleteMosque,
 }; 

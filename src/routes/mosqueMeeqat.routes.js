@@ -16,4 +16,7 @@ router
     .patch("/:mosqueId", editorAuth, controller.updateMosqueMeeqatByMosqueId)
     .delete("/:mosqueId", editorAuth, controller.deleteMosqueMeeqatByMosqueId);
 
+// Dummy route for HTML generation
+router.get("/:mosqueId/html", allAuth, controller.getMosqueMeeqatHTML);
+
 module.exports = router;
