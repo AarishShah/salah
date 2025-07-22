@@ -223,7 +223,7 @@ const getEditorRequests = async (status) => {
 const handleEditorRequest = async (requestId, action, adminId, rejectionReason) => {
     try {
         const request = await EditorRequest.findById(requestId)
-            .populate('userId')
+            .populate('userId', '-refreshTokens -googleId -__v') // Remove versions @Aarish khud ko nahi krpana chahiye admin -> editor
             .populate('requestedMosques');
 
         if (!request) {
