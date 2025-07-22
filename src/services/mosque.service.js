@@ -90,6 +90,7 @@ const searchMosques = async (query) => {
     try {
         const { locality, sect, schoolOfThought, address, page = 1, limit = 10 } = query;
         const filter = {};
+        // include search based in isActive status and also add name @Mueed @Aarish
         if (locality) filter.locality = { $regex: locality, $options: 'i' };
         if (sect) filter.sect = sect;
         if (schoolOfThought) filter.schoolOfThought = schoolOfThought;
@@ -139,6 +140,7 @@ const createMosque = async (data) => {
         await mosque.save();
         return { status: 'success', mosque };
     } catch (error) {
+        // remove this later
         if (error.code === 11000 && error.keyPattern && error.keyPattern['coordinates.coordinates']) {
             return {
                 status: 'failed',
