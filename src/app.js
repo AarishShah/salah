@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 // Database connection
 require("./db/mongoose");
@@ -61,6 +63,29 @@ app.use('/api/official-meeqat', officialMeeqatRoutes);
 app.use('/api/meeqat-config', meeqatConfigRoutes);
 app.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
 app.use('/api/mosque', mosqueMapRoutes);
+
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'MasjidSync API',
+      version: '1.0.0',
+      description: 'API documentation for MasjidSync Salah backend',
+    },
+    servers: [
+      { url: 'http://localhost:3000' }
+    ],
+  },
+  apis: [
+    './src/routes/*.js', // All route files for @swagger JSDoc comments
+  ],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// Swagger UI and JSON (must be before 404 handler)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api/swagger.json', (req, res) => res.json(swaggerSpec));
 
 // 404 handler
 app.use((req, res) => {
