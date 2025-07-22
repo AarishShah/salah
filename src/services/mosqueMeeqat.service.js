@@ -175,6 +175,7 @@ const getMosqueMeeqatByMosqueId = async (mosqueId) => {
 const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
     try {
         // Check mosque access
+        // Verfiy if duplicate document is not being created @Aarish
         if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
             return {
                 status: 'failed',
