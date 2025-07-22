@@ -2,6 +2,7 @@ const generateMeeqatHTML = (mosqueMeeqat, filters) => {
     const { timings, mosque, configSnapshot } = mosqueMeeqat;
     const currentYear = filters.year || new Date().getFullYear();
     const currentMonth = filters.month;
+    const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
 
     // Group timings by month
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
@@ -17,56 +18,62 @@ const generateMeeqatHTML = (mosqueMeeqat, filters) => {
         timingsByMonth[monthName].push(day);
     });
 
-    // Generate month tables
-    const generateMonthTable = (monthName, days) => {
+    // Generate month tables with collapse functionality
+    const generateMonthTable = (monthName, days, index) => {
+        const isCurrentMonth = monthName === currentMonthName;
         return `
             <div class="month-container">
-                <h2>${monthName} ${currentYear}</h2>
-                <table class="prayer-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th colspan="2">Fajr</th>
-                            <th>Sunrise</th>
-                            <th colspan="2">Dhuhr</th>
-                            <th colspan="2">Asr</th>
-                            <th colspan="2">Maghrib</th>
-                            <th colspan="2">Isha</th>
-                        </tr>
-                        <tr class="sub-header">
-                            <th></th>
-                            <th>Adhan</th>
-                            <th>Jamaat</th>
-                            <th></th>
-                            <th>Adhan</th>
-                            <th>Jamaat</th>
-                            <th>Adhan</th>
-                            <th>Jamaat</th>
-                            <th>Adhan</th>
-                            <th>Jamaat</th>
-                            <th>Adhan</th>
-                            <th>Jamaat</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${days.map(day => `
-                            <tr class="${day.isManuallyEdited ? 'edited' : ''}">
-                                <td class="date-cell">${day.date_csv}</td>
-                                <td>${day.adhanTimes.fajr}</td>
-                                <td class="jamaat-time">${day.fajr}</td>
-                                <td>${day.sunrise}</td>
-                                <td>${day.adhanTimes.dhuhr}</td>
-                                <td class="jamaat-time">${day.dhuhr}</td>
-                                <td>${day.adhanTimes.asr}</td>
-                                <td class="jamaat-time">${day.asr}</td>
-                                <td>${day.adhanTimes.maghrib}</td>
-                                <td class="jamaat-time">${day.maghrib}</td>
-                                <td>${day.adhanTimes.isha}</td>
-                                <td class="jamaat-time">${day.isha}</td>
+                <h2 class="month-header ${isCurrentMonth ? 'active' : ''}" onclick="toggleMonth('month-${index}')">
+                    <span class="month-arrow" id="arrow-${index}">${isCurrentMonth ? '▼' : '▶'}</span>
+                    ${monthName} ${currentYear}
+                </h2>
+                <div class="month-content ${isCurrentMonth ? 'expanded' : ''}" id="month-${index}">
+                    <table class="prayer-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th colspan="2">Fajr</th>
+                                <th>Sunrise</th>
+                                <th colspan="2">Dhuhr</th>
+                                <th colspan="2">Asr</th>
+                                <th colspan="2">Maghrib</th>
+                                <th colspan="2">Isha</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                            <tr class="sub-header">
+                                <th></th>
+                                <th>Adhan</th>
+                                <th>Jamaat</th>
+                                <th></th>
+                                <th>Adhan</th>
+                                <th>Jamaat</th>
+                                <th>Adhan</th>
+                                <th>Jamaat</th>
+                                <th>Adhan</th>
+                                <th>Jamaat</th>
+                                <th>Adhan</th>
+                                <th>Jamaat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${days.map(day => `
+                                <tr class="${day.isManuallyEdited ? 'edited' : ''}">
+                                    <td class="date-cell">${day.date_csv}</td>
+                                    <td>${day.adhanTimes.fajr}</td>
+                                    <td class="jamaat-time">${day.fajr}</td>
+                                    <td>${day.sunrise}</td>
+                                    <td>${day.adhanTimes.dhuhr}</td>
+                                    <td class="jamaat-time">${day.dhuhr}</td>
+                                    <td>${day.adhanTimes.asr}</td>
+                                    <td class="jamaat-time">${day.asr}</td>
+                                    <td>${day.adhanTimes.maghrib}</td>
+                                    <td class="jamaat-time">${day.maghrib}</td>
+                                    <td>${day.adhanTimes.isha}</td>
+                                    <td class="jamaat-time">${day.isha}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
     };
@@ -103,6 +110,9 @@ const generateMeeqatHTML = (mosqueMeeqat, filters) => {
             <style>
                 ${getStyles()}
             </style>
+            <script>
+                ${getScripts()}
+            </script>
         </head>
         <body>
             <div class="container">
@@ -119,16 +129,20 @@ const generateMeeqatHTML = (mosqueMeeqat, filters) => {
                 
                 <div class="controls no-print">
                     <button class="btn" onclick="window.print()">Print Timetable</button>
+                    <button class="btn" onclick="expandAll()">Expand All</button>
+                    <button class="btn" onclick="collapseAll()">Collapse All</button>
                     <a href="?year=${currentYear - 1}" class="btn">Previous Year</a>
                     <a href="?year=${currentYear + 1}" class="btn">Next Year</a>
                 </div>
                 
                 ${jummahInfo}
                 
-                ${Object.entries(timingsByMonth)
-                    .filter(([month]) => !currentMonth || month === currentMonth)
-                    .map(([month, days]) => generateMonthTable(month, days))
-                    .join('')}
+                <div class="months-container">
+                    ${Object.entries(timingsByMonth)
+                        .filter(([month]) => !currentMonth || month === currentMonth)
+                        .map(([month, days], index) => generateMonthTable(month, days, index))
+                        .join('')}
+                </div>
                 
                 <div class="footer">
                     <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
@@ -188,23 +202,61 @@ const getStyles = () => {
             color: #666;
         }
         
-        .month-container {
-            margin-bottom: 40px;
-            page-break-inside: avoid;
+        .months-container {
+            margin-top: 20px;
         }
         
-        .month-container h2 {
+        .month-container {
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .month-header {
             background-color: #34495e;
             color: white;
-            padding: 10px;
-            text-align: center;
-            border-radius: 5px 5px 0 0;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            transition: background-color 0.3s;
+            margin: 0;
+            font-size: 1.3em;
+        }
+        
+        .month-header:hover {
+            background-color: #2c3e50;
+        }
+        
+        .month-header.active {
+            background-color: #2980b9;
+        }
+        
+        .month-arrow {
+            margin-right: 10px;
+            font-size: 0.8em;
+            transition: transform 0.3s;
+            display: inline-block;
+        }
+        
+        .month-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .month-content.expanded {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
         }
         
         .prayer-table {
             width: 100%;
             border-collapse: collapse;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
         .prayer-table th {
@@ -293,8 +345,18 @@ const getStyles = () => {
                 border: 2px solid black;
             }
             
-            .month-container {
-                page-break-inside: avoid;
+            .month-content {
+                max-height: none !important;
+            }
+            
+            .month-header {
+                cursor: default;
+                background-color: #ddd !important;
+                color: black !important;
+            }
+            
+            .month-arrow {
+                display: none;
             }
             
             .prayer-table th {
@@ -330,6 +392,57 @@ const getStyles = () => {
         .btn:hover {
             background-color: #2980b9;
         }
+    `;
+};
+
+const getScripts = () => {
+    return `
+        function toggleMonth(monthId) {
+            const content = document.getElementById(monthId);
+            const arrow = document.getElementById('arrow-' + monthId.split('-')[1]);
+            const header = content.previousElementSibling;
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                arrow.textContent = '▶';
+                header.classList.remove('active');
+            } else {
+                content.classList.add('expanded');
+                arrow.textContent = '▼';
+                header.classList.add('active');
+            }
+        }
+        
+        function expandAll() {
+            const contents = document.querySelectorAll('.month-content');
+            const arrows = document.querySelectorAll('.month-arrow');
+            const headers = document.querySelectorAll('.month-header');
+            
+            contents.forEach((content, index) => {
+                content.classList.add('expanded');
+                arrows[index].textContent = '▼';
+                headers[index].classList.add('active');
+            });
+        }
+        
+        function collapseAll() {
+            const contents = document.querySelectorAll('.month-content');
+            const arrows = document.querySelectorAll('.month-arrow');
+            const headers = document.querySelectorAll('.month-header');
+            
+            contents.forEach((content, index) => {
+                content.classList.remove('expanded');
+                arrows[index].textContent = '▶';
+                headers[index].classList.remove('active');
+            });
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                collapseAll();
+            }
+        });
     `;
 };
 
