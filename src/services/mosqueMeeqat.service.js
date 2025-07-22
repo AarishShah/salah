@@ -1,5 +1,6 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
+const generateMeeqatHTML = require('../helpers/meeqatHTMLGenerator');
 
 // Helper function to check mosque access
 const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
@@ -444,10 +445,43 @@ const deleteMosqueMeeqatByMosqueId = async (mosqueId, role, assignedMosques) => 
     }
 };
 
+const getMosqueMeeqatHTML = async (mosqueId, filters = {}) => {
+    try {
+        // Get mosqueMeeqat with populated references
+        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
+            .populate('mosque', 'name address locality')
+            .populate('sourceOfficialMeeqat', 'locationName publisher');
+
+        if (!mosqueMeeqat) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'No active mosqueMeeqat found for this mosque'
+            };
+        }
+
+        // Generate HTML
+        const html = generateMeeqatHTML(mosqueMeeqat, filters);
+
+        return {
+            status: 'success',
+            html
+        };
+    } catch (error) {
+        console.error('GetMosqueMeeqatHTML error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to generate mosqueMeeqat HTML'
+        };
+    }
+};
+
 module.exports = {
     getMosqueMeeqatByMosqueId,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
     updateMosqueMeeqatByMosqueId,
-    deleteMosqueMeeqatByMosqueId
+    deleteMosqueMeeqatByMosqueId,
+    getMosqueMeeqatHTML
 };
