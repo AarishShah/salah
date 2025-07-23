@@ -65,20 +65,20 @@ app.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
 app.use('/api/mosque', mosqueMapRoutes);
 
 const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'MasjidSync API',
-      version: '1.0.0',
-      description: 'API documentation for MasjidSync Salah backend',
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'MasjidSync API',
+            version: '1.0.0',
+            description: 'API documentation for MasjidSync Salah backend',
+        },
+        servers: [
+            { url: 'http://localhost:8080' }
+        ],
     },
-    servers: [
-      { url: 'http://localhost:3000' }
+    apis: [
+        './src/routes/*.js', // All route files for @swagger JSDoc comments
     ],
-  },
-  apis: [
-    './src/routes/*.js', // All route files for @swagger JSDoc comments
-  ],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -127,6 +127,7 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
     console.log(`SALAH server is running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
 });
 
 module.exports = app;
