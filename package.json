@@ -9,7 +9,7 @@
     "lint": "echo 'No lint step for backend' && exit 0",
     "test": "echo 'No tests yet' && exit 0"
   },
-  "author": "Aarish, Daawar, Mafooq, Mueed",
+  "author": "Aarish, Daawar, Mafooq, Majid, Mueed",
   "license": "ISC",
   "description": "",
   "dependencies": {
