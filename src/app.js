@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger/config');
 
 // Database connection
 require("./db/mongoose");
@@ -62,6 +64,22 @@ app.use('/api/meeqat-config', meeqatConfigRoutes);
 app.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
 app.use('/api/mosque', mosqueMapRoutes);
 
+// Swagger configuration is now handled in ./swagger/config.js
+
+// Swagger UI and JSON (must be before 404 handler)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'MasjidSync API Documentation',
+    customfavIcon: '/favicon.ico',
+    swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+        filter: true,
+        tagsSorter: 'alpha'
+    }
+}));
+app.get('/api/swagger.json', (req, res) => res.json(swaggerSpec));
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
@@ -102,6 +120,7 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
     console.log(`SALAH server is running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
 });
 
 module.exports = app;

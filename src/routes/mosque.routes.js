@@ -24,4 +24,4 @@ router
     .post('/admin/create', adminAuth, controller.createMosque)
     .delete('/admin/:id', adminAuth, controller.softDeleteMosque);
 
-module.exports = router; 
+module.exports = router;

@@ -4,7 +4,10 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "node src/app.js",
+    "build": "echo 'No build step for backend' && exit 0",
+    "lint": "echo 'No lint step for backend' && exit 0",
+    "test": "echo 'No tests yet' && exit 0"
   },
   "author": "Aarish, Daawar, Mafooq, Mueed",
   "license": "ISC",
@@ -23,7 +26,9 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "mongoose": "^8.16.1",
-    "multer": "^2.0.1"
+    "multer": "^2.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

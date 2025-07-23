@@ -9,4 +9,4 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 // POST /api/base-timing/upload
 router.post('/upload', adminAuth, upload.single('file'), controller.uploadBaseTiming);
 
-module.exports = router; 
+module.exports = router;
