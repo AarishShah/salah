@@ -46,4 +46,4 @@ jobs:
           docker rm salah || true
 
           echo "Running container..."
-          docker run -d --name salah --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:5000 ${{ env.IMAGE }}
+          docker run -d --name salah --env-file /home/${{ secrets.VM_USERNAME }}/.env -p 80:3000 ${{ env.IMAGE }}
