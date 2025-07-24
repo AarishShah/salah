@@ -46,6 +46,34 @@ const getAllUsers = async (filters) => {
     }
 };
 
+const getUser = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+            .select('-refreshTokens -__v')
+            .populate('assignedMosques', 'name address locality contactPerson');
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        return {
+            status: 'success',
+            user
+        };
+    } catch (error) {
+        console.error('GetUser error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch user'
+        };
+    }
+};
+
 const getUserStats = async () => {
     try {
         const stats = await User.aggregate([
@@ -63,7 +91,7 @@ const getUserStats = async () => {
                         {
                             $group: {
                                 _id: null, // Don't group, aggregate all users
-                                total: { $sum: 1 }, // TODO: This count is incorrect as it counts admin twice, once as user and once as admin
+                                total: { $sum: 1 },
                                 active: {
                                     $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
                                 },
@@ -318,34 +346,6 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
     }
 };
 
-const getUser = async (userId) => {
-    try {
-        const user = await User.findById(userId)
-            .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'name address locality contactPerson');
-
-        if (!user) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'User not found'
-            };
-        }
-
-        return {
-            status: 'success',
-            user
-        };
-    } catch (error) {
-        console.error('GetUser error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch user'
-        };
-    }
-};
-
 const updateUserRole = async (userId, newRole, mosqueIds) => {
     try {
         const user = await User.findById(userId).select('-refreshTokens -__v');
@@ -543,11 +543,11 @@ const updateUserMosques = async (userId, mosqueIds) => {
 
 module.exports = {
     getAllUsers,
+    getUser,
     getUserStats,
     getAllEditors,
     getEditorRequests,
     handleEditorRequest,
-    getUser,
     updateUserRole,
     updateUserStatus,
     updateUserMosques,

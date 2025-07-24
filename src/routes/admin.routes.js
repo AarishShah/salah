@@ -12,11 +12,11 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 
 router
     .get("/all", adminAuth, controller.getAllUsers)
+    .get("/:userId", adminAuth, controller.getUser)
     .get("/stats", adminAuth, controller.getUserStats)
     .get("/editors", adminAuth, controller.getAllEditors)
     .get("/editor-requests", adminAuth, controller.getEditorRequests)
     .put("/editor-requests/:requestId", adminAuth, controller.handleEditorRequest)
-    .get("/:userId", adminAuth, controller.getUser)
     .put("/:userId/role", adminAuth, controller.updateUserRole)
     .put("/:userId/status", adminAuth, controller.updateUserStatus)
     .put("/:userId/mosques", adminAuth, controller.updateUserMosques);
