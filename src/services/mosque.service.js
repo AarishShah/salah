@@ -3,16 +3,17 @@ const User = require('../models/user.model');
 const OfficialMeeqat = require('../models/officialMeeqat.model');
 const { getRoutesForMosques } = require('../helpers/mapbox');
 
-// Fetch mosques within a radius (in km) from given coordinates
-const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = false }) => {
+// Get nearby mosques
+const getNearbyMosques = async (filters) => {
     try {
+        const { latitude, longitude, radius, withRoutes } = filters;
+
         // Convert radius to meters
         const radiusMeters = radius * 1000;
-        // MongoDB expects [lng, lat]
         const userLocation = [longitude, latitude];
-        const fetchLimit = 3; // Adjust Later
+        const fetchLimit = 3;
 
-        // Find mosques within radius, sorted by distance, limit 10
+        // Find mosques within radius
         const mosques = await Mosque.aggregate([
             {
                 $geoNear: {
@@ -27,6 +28,7 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
         ]);
 
         let mosquesResult = mosques.map(mosque => ({
+            _id: mosque._id,
             name: mosque.name,
             sect: mosque.sect,
             address: mosque.address,
@@ -40,6 +42,7 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
             route: null
         }));
 
+        // Add routes if requested
         if (withRoutes && process.env.MAPBOX_API_KEY && mosques.length > 0) {
             const routes = await getRoutesForMosques(userLocation, mosques);
             mosquesResult = mosquesResult.map((mosque, idx) => ({
@@ -50,10 +53,11 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
 
         return {
             status: 'success',
-            mosques: mosquesResult
+            data: mosquesResult,
+            count: mosquesResult.length
         };
     } catch (error) {
-        console.error('getNearbyMosques error:', error);
+        console.error('GetNearbyMosques error:', error);
         return {
             status: 'failed',
             code: 500,
@@ -62,74 +66,148 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
     }
 };
 
-const getMosqueById = async (id, userId = null) => {
+// Search mosques with filters and pagination
+const searchMosques = async (filters, pagination) => {
     try {
-        const mosque = await Mosque.findById(id);
-        if (!mosque) {
-            return { status: 'failed', code: 404, message: 'Mosque not found' };
+        const { page, limit, sortBy, sortOrder } = pagination;
+        const skip = (page - 1) * limit;
+
+        // Build query
+        const query = {};
+
+        if (filters.name) {
+            query.name = { $regex: filters.name, $options: 'i' };
         }
+
+        if (filters.locality) {
+            query.locality = { $regex: filters.locality, $options: 'i' };
+        }
+
+        if (filters.address) {
+            query.address = { $regex: filters.address, $options: 'i' };
+        }
+
+        if (filters.sect) {
+            query.sect = filters.sect;
+        }
+
+        if (filters.schoolOfThought) {
+            query.schoolOfThought = filters.schoolOfThought;
+        }
+
+        if (filters.isActive !== undefined) {
+            query.isActive = filters.isActive === 'true';
+        }
+
+        // Execute query
+        const [mosques, totalCount] = await Promise.all([
+            Mosque.find(query)
+                .populate('createdBy', 'name email')
+                .populate('updatedBy', 'name email')
+                .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+                .skip(skip)
+                .limit(limit),
+            Mosque.countDocuments(query)
+        ]);
+
+        const totalPages = Math.ceil(totalCount / limit);
+
+        return {
+            status: 'success',
+            data: mosques,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalCount,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        };
+    } catch (error) {
+        console.error('SearchMosques error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to search mosques'
+        };
+    }
+};
+
+// Get mosque by ID
+const getMosqueById = async (id, userId, userRole) => {
+    try {
+        const mosque = await Mosque.findById(id)
+            .populate('officialMeeqat', 'locationName publisher')
+            .populate('createdBy', 'name email')
+            .populate('updatedBy', 'name email');
+
+        if (!mosque) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'This mosque is not yet registered with us.'
+            };
+        }
+
+        // Check if editor is assigned
         let isAssignedEditor = false;
-        if (userId) {
+        if (userId && userRole === 'editor') {
             const user = await User.findById(userId);
-            if (user && user.role === 'editor') {
-                isAssignedEditor = user.assignedMosques.some(mId => mId.toString() === mosque._id.toString());
+            isAssignedEditor = user?.assignedMosques?.some(
+                mId => mId.toString() === mosque._id.toString()
+            ) || false;
+        }
+
+        // Build response based on role and mosque status
+        const baseResponse = {
+            status: 'success',
+            data: mosque
+        };
+
+        if (!mosque.isActive) {
+            if (userRole === 'admin' || (userRole === 'editor' && isAssignedEditor)) {
+                baseResponse.warning = 'This mosque is currently inactive because some required fields are missing.';
+            } else {
+                return {
+                    status: 'success',
+                    message: 'This mosque is currently not being maintained by our system.'
+                };
             }
         }
-        return {
-            status: 'success',
-            mosque,
-            isActive: mosque.isActive,
-            isAssignedEditor
-        };
+
+        return baseResponse;
     } catch (error) {
-        console.error('getMosqueById error:', error);
-        return { status: 'failed', code: 500, message: 'Failed to fetch mosque' };
+        console.error('GetMosqueById error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch mosque'
+        };
     }
 };
 
-const searchMosques = async (query) => {
+// Set official meeqat for mosque (continued)
+const setOfficialMeeqat = async (data) => {
     try {
-        const { locality, sect, schoolOfThought, address, page = 1, limit = 10 } = query;
-        const filter = {};
-        // include search based in isActive status and also add name @Mueed @Aarish
-        if (locality) filter.locality = { $regex: locality, $options: 'i' };
-        if (sect) filter.sect = sect;
-        if (schoolOfThought) filter.schoolOfThought = schoolOfThought;
-        if (address) filter.address = { $regex: address, $options: 'i' };
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        const [mosques, total] = await Promise.all([
-            // Add filter by name and isActive
-            Mosque.find(filter).skip(skip).limit(parseInt(limit)),
-            Mosque.countDocuments(filter)
-        ]);
-        return {
-            status: 'success',
-            mosques,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages: Math.ceil(total / parseInt(limit))
-        };
-    } catch (error) {
-        console.error('searchMosques error:', error);
-        return { status: 'failed', code: 500, message: 'Failed to search mosques' };
-    }
-};
+        const { mosqueId, officialMeeqatId, userId, userRole } = data;
 
-const setOfficialMeeqat = async (mosqueId, officialMeeqatId, userId, userRole) => {
-    try {
         // Fetch mosque
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
-            return { status: 'failed', code: 404, message: 'Mosque not found' };
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
         }
 
-        // Check if editor is assigned to this mosque (if user is editor)
+        // Check authorization for editors
         if (userRole === 'editor') {
             const user = await User.findById(userId);
-            const isAssigned = user.assignedMosques.some(
+            const isAssigned = user?.assignedMosques?.some(
                 mId => mId.toString() === mosque._id.toString()
-            );
+            ) || false;
+
             if (!isAssigned) {
                 return {
                     status: 'failed',
@@ -142,7 +220,11 @@ const setOfficialMeeqat = async (mosqueId, officialMeeqatId, userId, userRole) =
         // Fetch official meeqat
         const officialMeeqat = await OfficialMeeqat.findById(officialMeeqatId);
         if (!officialMeeqat) {
-            return { status: 'failed', code: 404, message: 'Official Meeqat not found' };
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Official Meeqat not found'
+            };
         }
 
         // Validate sect compatibility
@@ -164,112 +246,185 @@ const setOfficialMeeqat = async (mosqueId, officialMeeqatId, userId, userRole) =
         }
 
         // Update mosque with official meeqat
-        mosque.officialMeeqat = officialMeeqatId;
-        mosque.updatedBy = userId;
-        
-        // Check if mosque can be activated
-        // A mosque is active if it has at least one timing source and a contact person
-        // if (mosque.contactPerson && (mosque.officialMeeqat || mosque.meeqatConfig || mosque.mosqueMeeqat)) {
-        //     mosque.isActive = true;
-        // }
-
-        await mosque.save();
-
-        // Populate the official meeqat details in response
-        await mosque.populate('officialMeeqat', 'locationName publisher');
+        const updatedMosque = await Mosque.findByIdAndUpdate(
+            mosqueId,
+            {
+                officialMeeqat: officialMeeqatId,
+                updatedBy: userId
+            },
+            { new: true, runValidators: true }
+        ).populate('officialMeeqat', 'locationName publisher');
 
         return {
             status: 'success',
             message: 'Official Meeqat successfully linked to mosque',
-            mosque
+            data: updatedMosque
         };
 
     } catch (error) {
-        console.error('setOfficialMeeqat error:', error);
-        return { status: 'failed', code: 500, message: 'Failed to set official meeqat' };
-    }
-};
+        console.error('SetOfficialMeeqat error:', error);
 
-const createMosque = async (data) => {
-    try {
-        // Only allow these fields
-        const allowedFields = ['name', 'address', 'locality', 'coordinates', 'sect', 'schoolOfThought', 'createdBy'];
-        const mosqueData = {};
-        for (const field of allowedFields) {
-            if (data[field] !== undefined) {
-                mosqueData[field] = data[field];
-            }
-        }
-        // Check for existing mosque at the same coordinates
-        if (mosqueData.coordinates && mosqueData.coordinates.coordinates) {
-            const existing = await Mosque.findOne({ 'coordinates.coordinates': mosqueData.coordinates.coordinates });
-            if (existing) {
-                return {
-                    status: 'failed',
-                    code: 400,
-                    message: 'A mosque already exists at these coordinates.'
-                };
-            }
-        }
-        const mosque = new Mosque(mosqueData);
-        await mosque.save();
-        return { status: 'success', mosque };
-    } catch (error) {
-        // remove this later
-        if (error.code === 11000 && error.keyPattern && error.keyPattern['coordinates.coordinates']) {
+        if (error.name === 'ValidationError') {
             return {
                 status: 'failed',
                 code: 400,
-                message: 'A mosque already exists at these coordinates.'
+                message: 'Validation error',
+                errors: Object.values(error.errors).map(e => e.message)
             };
         }
-        console.error('createMosque error:', error);
-        return { status: 'failed', code: 500, message: 'Failed to create mosque' };
+
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to set official meeqat'
+        };
     }
 };
 
-const softDeleteMosque = async (id) => {
+// Create new mosque
+const createMosque = async (data) => {
+    try {
+        const { name, address, locality, coordinates, sect, schoolOfThought, createdBy } = data;
+
+        // Check for existing mosque at the same coordinates
+        if (coordinates && coordinates.coordinates) {
+            const existing = await Mosque.findOne({
+                'coordinates.coordinates': coordinates.coordinates
+            });
+
+            if (existing) {
+                return {
+                    status: 'failed',
+                    code: 409,
+                    message: 'A mosque already exists at these coordinates'
+                };
+            }
+        }
+
+        // Create new mosque
+        const newMosque = new Mosque({
+            name,
+            address,
+            locality,
+            coordinates,
+            sect,
+            schoolOfThought: sect === 'sunni' ? schoolOfThought : undefined,
+            createdBy
+        });
+
+        await newMosque.save();
+
+        // Populate creator info
+        await newMosque.populate('createdBy', 'name email');
+
+        return {
+            status: 'success',
+            message: 'Mosque created successfully',
+            data: newMosque
+        };
+
+    } catch (error) {
+        console.error('CreateMosque error:', error);
+
+        if (error.code === 11000 && error.keyPattern && error.keyPattern['coordinates.coordinates']) {
+            return {
+                status: 'failed',
+                code: 409,
+                message: 'A mosque already exists at these coordinates'
+            };
+        }
+
+        if (error.name === 'ValidationError') {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Validation error',
+                errors: Object.values(error.errors).map(e => e.message)
+            };
+        }
+
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to create mosque'
+        };
+    }
+};
+
+// Soft delete mosque
+const softDeleteMosque = async (id, userId) => {
     try {
         const mosque = await Mosque.findById(id);
+
         if (!mosque) {
-            return { status: 'failed', code: 404, message: 'Mosque not found' };
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
         }
+
+        // Check if already soft deleted
         const isAlreadySoftDeleted =
             mosque.isActive === false &&
             mosque.officialMeeqat === null &&
             mosque.meeqatConfig === null &&
             mosque.mosqueMeeqat === null &&
             mosque.contactPerson === null;
+
         if (isAlreadySoftDeleted) {
             return {
                 status: 'success',
-                message: 'Mosque is already in a soft delete state.',
-                mosque
+                message: 'Mosque is already in a soft delete state',
+                data: mosque
             };
         }
+
         // Perform soft delete
-        mosque.isActive = false;
-        mosque.officialMeeqat = null;
-        mosque.meeqatConfig = null;
-        mosque.mosqueMeeqat = null;
-        mosque.contactPerson = null;
-        await mosque.save();
+        const updatedMosque = await Mosque.findByIdAndUpdate(
+            id,
+            {
+                isActive: false,
+                officialMeeqat: null,
+                meeqatConfig: null,
+                mosqueMeeqat: null,
+                contactPerson: null,
+                updatedBy: userId
+            },
+            { new: true, runValidators: true }
+        ).populate('updatedBy', 'name email');
+
         return {
             status: 'success',
-            message: 'Mosque has been successfully soft deleted.',
-            mosque
+            message: 'Mosque has been successfully soft deleted',
+            data: updatedMosque
         };
+
     } catch (error) {
-        console.error('softDeleteMosque error:', error);
-        return { status: 'failed', code: 500, message: 'Failed to soft delete mosque' };
+        console.error('SoftDeleteMosque error:', error);
+
+        if (error.name === 'ValidationError') {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Validation error',
+                errors: Object.values(error.errors).map(e => e.message)
+            };
+        }
+
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to soft delete mosque'
+        };
     }
 };
 
 module.exports = {
     getNearbyMosques,
-    getMosqueById,
     searchMosques,
+    getMosqueById,
     setOfficialMeeqat,
     createMosque,
-    softDeleteMosque,
-}; 
+    softDeleteMosque
+};
