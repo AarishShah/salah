@@ -22,18 +22,6 @@ const getAllUsers = catchError(async (req, res) => {
     return res.json(result);
 });
 
-const getUser = catchError(async (req, res) => {
-    const { userId } = req.params;
-
-    const result = await adminService.getUser(userId);
-
-    if (result.status === 'failed') {
-        return res.status(result.code || 404).json(result);
-    }
-
-    return res.json(result);
-});
-
 const getUserStats = catchError(async (req, res) => {
     const result = await adminService.getUserStats();
 
@@ -82,6 +70,18 @@ const handleEditorRequest = catchError(async (req, res) => {
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
+});
+
+const getUser = catchError(async (req, res) => {
+    const { userId } = req.params;
+
+    const result = await adminService.getUser(userId);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 404).json(result);
     }
 
     return res.json(result);
@@ -149,11 +149,11 @@ const updateUserMosques = catchError(async (req, res) => {
 
 module.exports = {
     getAllUsers,
-    getUser,
     getUserStats,
     getAllEditors,
     getEditorRequests,
     handleEditorRequest,
+    getUser,
     updateUserRole,
     updateUserStatus,
     updateUserMosques,

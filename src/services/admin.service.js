@@ -46,34 +46,6 @@ const getAllUsers = async (filters) => {
     }
 };
 
-const getUser = async (userId) => {
-    try {
-        const user = await User.findById(userId)
-            .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'name address locality contactPerson');
-
-        if (!user) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'User not found'
-            };
-        }
-
-        return {
-            status: 'success',
-            user
-        };
-    } catch (error) {
-        console.error('GetUser error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch user'
-        };
-    }
-};
-
 const getUserStats = async () => {
     try {
         const stats = await User.aggregate([
@@ -346,6 +318,34 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
     }
 };
 
+const getUser = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+            .select('-refreshTokens -__v')
+            .populate('assignedMosques', 'name address locality contactPerson');
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        return {
+            status: 'success',
+            user
+        };
+    } catch (error) {
+        console.error('GetUser error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch user'
+        };
+    }
+};
+
 const updateUserRole = async (userId, newRole, mosqueIds) => {
     try {
         const user = await User.findById(userId).select('-refreshTokens -__v');
@@ -543,11 +543,11 @@ const updateUserMosques = async (userId, mosqueIds) => {
 
 module.exports = {
     getAllUsers,
-    getUser,
     getUserStats,
     getAllEditors,
     getEditorRequests,
     handleEditorRequest,
+    getUser,
     updateUserRole,
     updateUserStatus,
     updateUserMosques,
