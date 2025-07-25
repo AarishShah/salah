@@ -144,7 +144,6 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
             };
         }
 
-
         if (user.role !== 'user') {
             return {
                 status: 'failed',
@@ -159,6 +158,15 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
                 status: 'failed',
                 code: 400,
                 message: 'Please provide a reason for your editor request'
+            };
+        }
+
+        // ADDED: Ensure only one mosque is selected
+        if (!mosqueIds || !Array.isArray(mosqueIds) || mosqueIds.length !== 1) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Please select exactly one mosque for your initial editor request'
             };
         }
 
@@ -187,7 +195,7 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
             return {
                 status: 'failed',
                 code: 400,
-                message: 'Some selected mosques are invalid'
+                message: 'Selected mosque is invalid'
             };
         }
 
@@ -202,7 +210,7 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
             return {
                 status: 'failed',
                 code: 400,
-                message: 'Some selected mosques already have editors'
+                message: 'Selected mosque already has an editor'
             };
         }
 
@@ -228,6 +236,153 @@ const createEditorRequest = async (userId, mosqueIds, reason) => {
             status: 'failed',
             code: 500,
             message: 'Failed to create editor request'
+        };
+    }
+};
+
+const createEditorAdditionalRequest = async (userId, mosqueIds, reason) => {
+    try {
+        const user = await User.findById(userId).populate('assignedMosques');
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        if (user.role !== 'editor') {
+            return {
+                status: 'failed',
+                code: 403,
+                message: 'Only editors can request additional mosques'
+            };
+        }
+
+        if (!user.phoneVerified) {
+            return {
+                status: 'failed',
+                code: 403,
+                message: 'Number not verified'
+            };
+        }
+
+        // Check existing pending requests count (max 3)
+        const pendingRequestsCount = await EditorRequest.countDocuments({
+            userId,
+            status: 'pending',
+            isActive: true
+        });
+
+        if (pendingRequestsCount >= 3) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'You can have maximum 3 pending requests at a time'
+            };
+        }
+
+        // Filter out mosques already assigned to this editor
+        const currentMosqueIds = user.assignedMosques.map(m => m._id.toString());
+        const newMosqueIds = mosqueIds.filter(id => !currentMosqueIds.includes(id));
+
+        if (newMosqueIds.length === 0) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'You are already assigned to all selected mosques'
+            };
+        }
+
+        // Validate mosque IDs
+        const validMosques = await Mosque.find({
+            _id: { $in: newMosqueIds },
+            // isActive: true (Later change it to true)
+        });
+
+        if (validMosques.length !== newMosqueIds.length) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Some selected mosques are invalid'
+            };
+        }
+
+        // Check if any mosque already has an editor
+        const mosquesWithEditors = await User.find({
+            _id: { $ne: userId }, // Exclude current user
+            role: 'editor',
+            isActive: true,
+            assignedMosques: { $in: newMosqueIds }
+        }).select('assignedMosques name');
+
+        if (mosquesWithEditors.length > 0) {
+            // Get names of mosques that already have editors
+            const occupiedMosqueIds = [];
+            mosquesWithEditors.forEach(editor => {
+                editor.assignedMosques.forEach(mosqueId => {
+                    if (newMosqueIds.includes(mosqueId.toString())) {
+                        occupiedMosqueIds.push(mosqueId);
+                    }
+                });
+            });
+
+            const occupiedMosques = await Mosque.find({
+                _id: { $in: occupiedMosqueIds }
+            }).select('name');
+
+            const mosqueNames = occupiedMosques.map(m => m.name).join(', ');
+
+            return {
+                status: 'failed',
+                code: 400,
+                message: `The following mosques already have editors: ${mosqueNames}`
+            };
+        }
+
+        // Check if user already has pending requests for any of these mosques
+        const existingRequests = await EditorRequest.find({
+            userId,
+            status: 'pending',
+            isActive: true,
+            requestedMosques: { $in: newMosqueIds }
+        });
+
+        if (existingRequests.length > 0) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'You already have pending requests for some of these mosque(s)'
+            };
+        }
+
+        // Create editor request
+        const editorRequest = new EditorRequest({
+            userId,
+            requestedMosques: newMosqueIds,
+            reason: reason.trim(),
+            status: 'pending',
+            isActive: true
+        });
+
+        await editorRequest.save();
+
+        // Populate the mosque details for response
+        await editorRequest.populate('requestedMosques', 'name locality address');
+
+        return {
+            status: 'success',
+            message: 'Additional mosque request submitted successfully',
+            request: editorRequest,
+            pendingRequestsCount: pendingRequestsCount + 1
+        };
+    } catch (error) {
+        console.error('CreateEditorAdditionalRequest error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to create additional mosque request'
         };
     }
 };
@@ -299,6 +454,7 @@ module.exports = {
     updateProfile,
     deleteAccount,
     createEditorRequest,
+    createEditorAdditionalRequest,
     getEditorRequestStatus,
     verifyPhoneStatus,
 };
