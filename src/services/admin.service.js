@@ -196,8 +196,17 @@ const getAllEditors = async () => {
 
 const getEditorRequests = async (status) => {
     try {
-        const query = { isActive: true };  // ADDED: Only get active requests
-        if (status) query.status = status;
+        const query = {};
+
+        // If a specific status is provided, filter by it.
+        if (status) {
+            query.status = status;
+        } else {
+            // If NO status is provided, default to showing the 'pending' queue,
+            // which consists of active requests needing review.
+            query.status = 'pending';
+            query.isActive = true;
+        }
 
         const requests = await EditorRequest.find(query)
             .populate('userId', 'name email profilePicture')
