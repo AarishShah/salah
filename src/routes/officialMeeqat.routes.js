@@ -8,6 +8,7 @@ const { uploadRateLimiter } = require("../utils/rateLimiter");
 
 // Middleware
 const adminAuth = Auth({ allowedRoles: ['admin'] });
+const editorAuth = Auth({ allowedRoles: ['editor', 'admin'] }); // added editorAuth for editor access
 const allAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 
 // --- User Routes ---
@@ -16,7 +17,7 @@ router
 
 // --- Admin Routes ---
 router
-    .get("/", adminAuth, controller.getAllOfficialMeeqats)
+    .get("/", editorAuth, controller.getAllOfficialMeeqats)  // changes to editorAuth from adminAuth
     .post("/", adminAuth, uploadRateLimiter, upload.single('csvFile'), controller.createOfficialMeeqat)
     .put("/:id", adminAuth, uploadRateLimiter, upload.single('csvFile'), controller.updateOfficialMeeqat);
 
