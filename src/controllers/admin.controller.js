@@ -43,7 +43,7 @@ const getAllEditors = catchError(async (req, res) => {
 });
 
 const getEditorRequests = catchError(async (req, res) => {
-    const { status = 'pending' } = req.query;
+    const { status } = req.query;
 
     const result = await adminService.getEditorRequests(status);
 
