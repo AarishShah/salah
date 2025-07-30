@@ -111,7 +111,9 @@ const googleSignIn = async (idToken) => {
                 role: user.role,
                 permissions: user.permissions,
                 assignedMosques: user.assignedMosques,
-                isNewUser: user.loginCount === 1
+                isNewUser: user.loginCount === 1,
+                isActive: user.isActive,
+                isBlocked: user.isBlocked
             }
         };
 
