@@ -27,6 +27,7 @@ const getNearbyMosques = async ({ latitude, longitude, radius = 2, withRoutes = 
         ]);
 
         let mosquesResult = mosques.map(mosque => ({
+            _id: mosque._id,
             name: mosque.name,
             sect: mosque.sect,
             address: mosque.address,
