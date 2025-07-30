@@ -1,5 +1,6 @@
 const OfficialMeeqat = require('../models/officialMeeqat.model');
 const { parseCSVBuffer, validateCSVData, convertCSVToTimings } = require('../helpers/parseCSVBuffer');
+const { formatTimings } = require("../helpers/timeFormatters");
 
 // Get all official meeqats with filters
 const getAllOfficialMeeqats = async (filters, pagination) => {
@@ -82,10 +83,10 @@ const getAllOfficialMeeqats = async (filters, pagination) => {
     }
 };
 
-// Get official meeqat by ID
-const getOfficialMeeqatById = async (id) => {
+// Get official meeqat by ID with optional format transformation
+const getOfficialMeeqatById = async (officialMeeqatId, format = '12h') => {
     try {
-        const officialMeeqat = await OfficialMeeqat.findById(id)
+        const officialMeeqat = await OfficialMeeqat.findById(officialMeeqatId)
             .populate('createdBy', 'name email')
             .populate('updatedBy', 'name email');
 
@@ -97,9 +98,23 @@ const getOfficialMeeqatById = async (id) => {
             };
         }
 
+        // Transform timings based on requested format
+        let transformedData = officialMeeqat.toObject();
+        
+        if (transformedData.timings) {
+            const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
+            transformedData.timings = formatTimings(transformedData.timings, timeFormat);
+            
+            return {
+                status: 'success',
+                data: transformedData,
+                format: timeFormat // Include format info in response
+            };
+        }
+
         return {
             status: 'success',
-            data: officialMeeqat
+            data: transformedData
         };
     } catch (error) {
         console.error('GetOfficialMeeqatById error:', error);
