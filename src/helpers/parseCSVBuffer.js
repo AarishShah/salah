@@ -96,7 +96,7 @@ const convertCSVToTimings = (csvData) => {
         const prayers = ['Fajr', 'Sunrise', 'Zenith', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
         const times = {};
         
-        // First pass: convert all times to naive minutes
+        // First pass: convert all times to naive minutes (without AM/PM consideration)
         prayers.forEach(prayer => {
             times[prayer.toLowerCase()] = timeStringToMinutes(row[prayer]);
         });
