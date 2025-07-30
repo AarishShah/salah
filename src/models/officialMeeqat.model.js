@@ -37,19 +37,27 @@ const officialMeeqatSchema = new mongoose.Schema({
     },
     schoolOfThought: {
         type: String,
-        enum: ['hanafi', 'shafi', 'maliki', 'hanbali'],
-        required: function () {
-            return this.sect === 'sunni';
-        },
+        enum: [
+            // Sunni schools
+            'hanafi', 'shafi', 'maliki', 'hanbali',
+            // Shia schools
+            'jafari', 'ismaili', 'zaydi'
+        ],
+        required: true,
         validate: {
             validator: function (v) {
-                // If Shia, schoolOfThought should be null/undefined
-                if (this.sect === 'shia') return !v;
-                // If Sunni, schoolOfThought is required
-                if (this.sect === 'sunni') return !!v;
-                return true;
+                const sunniSchools = ['hanafi', 'shafi', 'maliki', 'hanbali'];
+                const shiaSchools = ['jafari', 'ismaili', 'zaydi'];
+                
+                if (this.sect === 'sunni') {
+                    return sunniSchools.includes(v);
+                }
+                if (this.sect === 'shia') {
+                    return shiaSchools.includes(v);
+                }
+                return false;
             },
-            message: 'School of thought is required for Sunni sect only'
+            message: 'Invalid school of thought for the selected sect'
         }
     },
     publisher: {
@@ -74,16 +82,8 @@ const officialMeeqatSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// For Sunni entries
 officialMeeqatSchema.index({ locationName: 1, sect: 1, schoolOfThought: 1 }, { 
-    unique: true,
-    partialFilterExpression: { sect: 'sunni' }
-});
-
-// For Shia entries
-officialMeeqatSchema.index({ locationName: 1, sect: 1 }, { 
-    unique: true,
-    partialFilterExpression: { sect: 'shia' }
+    unique: true
 });
 
 module.exports = mongoose.model('OfficialMeeqat', officialMeeqatSchema);
