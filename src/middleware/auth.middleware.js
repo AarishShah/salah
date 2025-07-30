@@ -93,7 +93,7 @@ const Auth = (options = {}) => {
         name: user.name,
         role: user.role,
         assignedMosques: user.assignedMosques,
-        permissions: user.permissions
+        // permissions: user.permissions
       };
       
       next();
