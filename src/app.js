@@ -41,3 +41,5 @@ app.listen(port, () => {
 });
 
 module.exports = app;
+
+// Edit this line to manually restart the server
