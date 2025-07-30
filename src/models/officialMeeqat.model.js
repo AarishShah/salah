@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 
 const dailyTimingSchema = new mongoose.Schema({
     date_csv: { type: String, required: true }, // "1-Jan" format from CSV
-    dayNumber: { type: Number, required: true, min: 1, max: 366 }, // Day of year
-    fajr: { type: String, required: true }, // HH:MM
-    sunrise: { type: String, required: true },
-    zenith: { type: String, required: true },
-    dhuhr: { type: String, required: true },
-    asr: { type: String, required: true },
-    maghrib: { type: String, required: true },
-    isha: { type: String, required: true }
+    dayNumber: { type: Number, required: true }, // Day of year (1-366)
+    fajr: { type: Number, required: true, min: 0, max: 1439 }, // Minutes from midnight (0-1439)
+    sunrise: { type: Number, required: true, min: 0, max: 1439 },
+    zenith: { type: Number, required: true, min: 0, max: 1439 },
+    dhuhr: { type: Number, required: true, min: 0, max: 1439 },
+    asr: { type: Number, required: true, min: 0, max: 1439 },
+    maghrib: { type: Number, required: true, min: 0, max: 1439 },
+    isha: { type: Number, required: true, min: 0, max: 1439 }
 }, { _id: false });
 
 const officialMeeqatSchema = new mongoose.Schema({

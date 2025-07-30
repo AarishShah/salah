@@ -117,17 +117,17 @@ const createOfficialMeeqat = async (data) => {
         const { locationName, sect, schoolOfThought, publisher, coordinates, csvBuffer, createdBy } = data;
 
         // Check if combination already exists
-        const existingQuery = { locationName, sect };
-        if (sect === 'sunni') {
-            existingQuery.schoolOfThought = schoolOfThought;
-        }
-
-        const existing = await OfficialMeeqat.findOne(existingQuery);
+        const existing = await OfficialMeeqat.findOne({ 
+            locationName, 
+            sect, 
+            schoolOfThought 
+        });
+        
         if (existing) {
             return {
                 status: 'failed',
                 code: 409,
-                message: `Official meeqat already exists for ${locationName} - ${sect}${sect === 'sunni' ? ' - ' + schoolOfThought : ''}`
+                message: `Official meeqat already exists for ${locationName} - ${sect} - ${schoolOfThought}`
             };
         }
 
@@ -144,14 +144,14 @@ const createOfficialMeeqat = async (data) => {
             };
         }
 
-        // Convert CSV to timings format
+        // Convert CSV to timings format with smart AM/PM interpretation
         const timings = convertCSVToTimings(csvData);
 
         // Create new official meeqat
         const newOfficialMeeqat = new OfficialMeeqat({
             locationName,
             sect,
-            schoolOfThought: sect === 'sunni' ? schoolOfThought : undefined,
+            schoolOfThought,
             publisher,
             coordinates,
             timings,

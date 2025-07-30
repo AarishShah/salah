@@ -1,5 +1,12 @@
+// helpers/parseCSVBuffer.js
 const csvParser = require('csv-parser');
 const { Readable } = require('stream');
+
+// Helper function to convert time string to minutes from midnight
+const timeStringToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+};
 
 // Helper function to parse CSV from buffer
 const parseCSVBuffer = (buffer) => {
@@ -14,7 +21,7 @@ const parseCSVBuffer = (buffer) => {
             .on('error', (error) => reject(error));
     });
 };
-exports.parseCSVBuffer = parseCSVBuffer;
+
 // Validate CSV data
 const validateCSVData = (data) => {
     const errors = [];
@@ -29,7 +36,7 @@ const validateCSVData = (data) => {
     // Check row count
     if (data.length !== 366) {
         errors.push(`CSV must have exactly 366 rows, found ${data.length}`);
-        return { isValid: false, errors }; // Stop here if row count is wrong
+        return { isValid: false, errors };
     }
 
     // Check columns
@@ -39,7 +46,7 @@ const validateCSVData = (data) => {
 
     if (missingColumns.length > 0) {
         errors.push(`Missing columns: ${missingColumns.join(', ')}`);
-        return { isValid: false, errors }; // Stop here if columns are missing
+        return { isValid: false, errors };
     }
 
     // Validate each row
@@ -54,40 +61,27 @@ const validateCSVData = (data) => {
         // Validate date format
         if (!dateRegex.test(row.Date)) {
             errors.push(`Row ${rowNum}: Invalid date format '${row.Date}'. Expected format: D-MMM (e.g., 1-Jan)`);
-            return { isValid: false, errors }; // Stop on first error
+            return { isValid: false, errors };
         }
 
         // Check for duplicate dates
         if (dateSet.has(row.Date)) {
             errors.push(`Row ${rowNum}: Duplicate date '${row.Date}'`);
-            return { isValid: false, errors }; // Stop on first error
+            return { isValid: false, errors };
         }
         dateSet.add(row.Date);
 
-        // Validate prayer times
+        // Validate prayer times format
         const prayers = ['Fajr', 'Sunrise', 'Zenith', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
         for (const prayer of prayers) {
             if (!row[prayer]) {
                 errors.push(`Row ${rowNum}: Missing ${prayer} time`);
-                return { isValid: false, errors }; // Stop on first error
+                return { isValid: false, errors };
             } else if (!timeRegex.test(row[prayer])) {
                 errors.push(`Row ${rowNum}: Invalid ${prayer} time format '${row[prayer]}'. Expected HH:MM`);
-                return { isValid: false, errors }; // Stop on first error
+                return { isValid: false, errors };
             }
         }
-
-        // Uncomment this section when our csv data is ready for time sequence validation
-        // Validate time sequence
-        // const times = prayers.map(p => {
-        //     const [h, m] = row[p].split(':').map(Number);
-        //     return h * 60 + m;
-        // });
-        // for (let i = 1; i < times.length; i++) {
-        //     if (times[i] <= times[i - 1]) {
-        //         errors.push(`Row ${rowNum}: ${prayers[i]} time must be after ${prayers[i - 1]}`);
-        //         return { isValid: false, errors }; // Stop on first error
-        //     }
-        // }
     }
 
     return {
@@ -95,19 +89,57 @@ const validateCSVData = (data) => {
         errors: errors
     };
 };
-exports.validateCSVData = validateCSVData;
-// Convert CSV data to timings array
+
+// Convert CSV data to timings array with smart AM/PM interpretation
 const convertCSVToTimings = (csvData) => {
-    return csvData.map((row, index) => ({
-        date_csv: row.Date,
-        dayNumber: index + 1,
-        fajr: row.Fajr,
-        sunrise: row.Sunrise,
-        zenith: row.Zenith,
-        dhuhr: row.Dhuhr,
-        asr: row.Asr,
-        maghrib: row.Maghrib,
-        isha: row.Isha
-    }));
+    return csvData.map((row, index) => {
+        const prayers = ['Fajr', 'Sunrise', 'Zenith', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+        const times = {};
+        
+        // First pass: convert all times to naive minutes
+        prayers.forEach(prayer => {
+            times[prayer.toLowerCase()] = timeStringToMinutes(row[prayer]);
+        });
+
+        // Second pass: adjust times to ensure sequence
+        let previousTime = times.fajr; // Fajr is always morning
+        
+        // Process remaining prayers in sequence
+        for (let i = 1; i < prayers.length; i++) {
+            const prayerKey = prayers[i].toLowerCase();
+            let currentTime = times[prayerKey];
+            
+            // If current time is less than or equal to previous, it must be PM
+            if (currentTime <= previousTime) {
+                currentTime += 720; // Add 12 hours
+                
+                // If time goes past midnight, wrap around using modulus
+                if (currentTime > 1439) {
+                    currentTime = currentTime % 1440;
+                }
+                
+                times[prayerKey] = currentTime;
+            }
+            
+            previousTime = times[prayerKey];
+        }
+
+        return {
+            date_csv: row.Date,
+            dayNumber: index + 1,
+            fajr: times.fajr,
+            sunrise: times.sunrise,
+            zenith: times.zenith,
+            dhuhr: times.dhuhr,
+            asr: times.asr,
+            maghrib: times.maghrib,
+            isha: times.isha
+        };
+    });
 };
-exports.convertCSVToTimings = convertCSVToTimings;
+
+module.exports = {
+    parseCSVBuffer,
+    validateCSVData,
+    convertCSVToTimings
+};
