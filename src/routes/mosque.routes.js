@@ -13,15 +13,15 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 router
     .get('/map/nearby', userAuth, controller.getNearbyMosques)
     .get('/search', userAuth, controller.searchMosques)
-    .get('/:id', userAuth, controller.getMosqueById);
+    .get('/:mosqueid', userAuth, controller.getMosqueById);
 
 // --- Editor Routes ---
 router
-    .patch('/:id/official-meeqat', editorAuth, controller.setOfficialMeeqat);
+    .patch('/:mosqueId/official-meeqat', editorAuth, controller.setOfficialMeeqat);
     
 // --- Admin Routes ---
 router
     .post('/', adminAuth, controller.createMosque)
-    .delete('/:id', adminAuth, controller.softDeleteMosque);
+    .delete('/:mosqueId', adminAuth, controller.softDeleteMosque);
 
 module.exports = router;
