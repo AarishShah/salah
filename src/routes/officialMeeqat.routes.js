@@ -15,9 +15,12 @@ const allAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 router
     .get("/:officialMeeqatId", allAuth, controller.getOfficialMeeqatById);
 
+// --- Editor Routes ---
+router
+    .get("/", editorAuth, controller.getAllOfficialMeeqats)
+
 // --- Admin Routes ---
 router
-    .get("/", editorAuth, controller.getAllOfficialMeeqats)  // changes to editorAuth from adminAuth
     .post("/", adminAuth, uploadRateLimiter, upload.single('csvFile'), controller.createOfficialMeeqat)
     .put("/:officialMeeqatId", adminAuth, uploadRateLimiter, upload.single('csvFile'), controller.updateOfficialMeeqat);
 
