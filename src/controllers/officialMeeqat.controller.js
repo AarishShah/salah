@@ -47,9 +47,10 @@ const getAllOfficialMeeqats = catchError(async (req, res) => {
 
 // Get official meeqat by ID
 const getOfficialMeeqatById = catchError(async (req, res) => {
-    const { id } = req.params;
+    const { officialMeeqatId } = req.params;
+    const { format } = req.query; // Get format from query params
 
-    const result = await officialMeeqatService.getOfficialMeeqatById(id);
+    const result = await officialMeeqatService.getOfficialMeeqatById(officialMeeqatId, format);
 
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
