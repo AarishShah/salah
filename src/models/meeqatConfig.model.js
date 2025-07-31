@@ -8,16 +8,11 @@ const jamaatConfigSchema = new mongoose.Schema({
         max: 120
     }, // in minutes
     fixedTime: {
-        type: String,
+        type: Number,
         default: null,
-        validate: {
-            validator: function (v) {
-                if (!v) return true;
-                return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-            },
-            message: 'Fixed time must be in HH:MM format'
-        }
-    }, // HH:MM format
+        min: 0,
+        max: 1439
+    }, // minutes from midnight
     adhanGap: {
         type: Number,
         default: 10,
@@ -57,17 +52,20 @@ const meeqatConfigSchema = new mongoose.Schema({
     // Jummah (Friday) salah settings
     jummah: {
         adhanTime: {
-            type: String,
-            validate: {
-                validator: function (v) {
-                    if (!v) return true;
-                    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-                },
-                message: 'Time must be in HH:MM format'
-            }
-        },
-        khutbahStartTime: String,
-        jamaatTime: String
+            type: Number,
+            min: 0,
+            max: 1439
+        }, // minutes from midnight
+        khutbahStartTime: {
+            type: Number,
+            min: 0,
+            max: 1439
+        }, // minutes from midnight
+        jamaatTime: {
+            type: Number,
+            min: 0,
+            max: 1439
+        } // minutes from midnight
     },
 
     // Metadata
