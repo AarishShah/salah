@@ -19,4 +19,8 @@ router
 // Dummy route for HTML generation
 router.get("/:mosqueId/html", allAuth, controller.getMosqueMeeqatHTML);
 
+// remove later
+router
+    .get("/:mosqueId/daily", allAuth, controller.getDailyPrayers);
+
 module.exports = router;

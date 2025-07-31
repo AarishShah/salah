@@ -94,11 +94,25 @@ const getMosqueMeeqatHTML = catchError(async (req, res) => {
     return res.send(result.html);
 });
 
+const getDailyPrayers = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const result = await mosqueMeeqatService.getDailyPrayers(mosqueId, startDate, endDate);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
+});
+
 module.exports = {
     getMosqueMeeqatByMosqueId,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
     updateMosqueMeeqatByMosqueId,
     deleteMosqueMeeqatByMosqueId,
-    getMosqueMeeqatHTML
+    getMosqueMeeqatHTML,
+    getDailyPrayers,
 };
