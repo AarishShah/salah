@@ -477,11 +477,143 @@ const getMosqueMeeqatHTML = async (mosqueId, filters = {}) => {
     }
 };
 
+// Convert date to day number (1-366)
+const dateToDay = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const start = new Date(year, 0, 1); // Jan 1st of that year
+    const dayNumber = Math.floor((date - start) / (24 * 60 * 60 * 1000)) + 1;
+    return dayNumber;
+};
+
+// Validate date string format
+const isValidDate = (dateString) => {
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+};
+
+// Get daily prayers for date range
+const getDailyPrayers = async (mosqueId, startDate, endDate) => {
+    try {
+        // Validate inputs
+        if (!startDate || !endDate) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Both startDate and endDate are required (format: YYYY-MM-DD)'
+            };
+        }
+
+        if (!isValidDate(startDate) || !isValidDate(endDate)) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Invalid date format. Use YYYY-MM-DD'
+            };
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (start > end) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'startDate cannot be later than endDate'
+            };
+        }
+
+        // Check if dates are in same year
+        if (start.getFullYear() !== end.getFullYear()) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Date range cannot span multiple years'
+            };
+        }
+
+        // Check if mosque exists
+        const mosque = await Mosque.findById(mosqueId);
+        if (!mosque) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
+        }
+
+        // Find active mosqueMeeqat
+        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
+            .populate('mosque', 'name address locality')
+            .populate('sourceOfficialMeeqat', 'locationName publisher');
+
+        if (!mosqueMeeqat) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'No active mosqueMeeqat found for this mosque'
+            };
+        }
+
+        // Convert dates to day numbers
+        const startDayNumber = dateToDay(startDate);
+        const endDayNumber = dateToDay(endDate);
+
+        // Validate day numbers
+        if (startDayNumber < 1 || startDayNumber > 366 || endDayNumber < 1 || endDayNumber > 366) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Invalid date range'
+            };
+        }
+
+        // Filter timings by day number range
+        const filteredTimings = mosqueMeeqat.timings.filter(timing => 
+            timing.dayNumber >= startDayNumber && timing.dayNumber <= endDayNumber
+        );
+
+        return {
+            status: 'success',
+            mosque: {
+                id: mosqueMeeqat.mosque._id,
+                name: mosqueMeeqat.mosque.name,
+                address: mosqueMeeqat.mosque.address,
+                locality: mosqueMeeqat.mosque.locality
+            },
+            dateRange: {
+                startDate,
+                endDate,
+                startDayNumber,
+                endDayNumber,
+                totalDays: filteredTimings.length
+            },
+            timings: filteredTimings,
+            source: {
+                officialMeeqat: mosqueMeeqat.sourceOfficialMeeqat.locationName,
+                publisher: mosqueMeeqat.sourceOfficialMeeqat.publisher,
+                version: mosqueMeeqat.version,
+                generatedAt: mosqueMeeqat.generatedAt,
+                isApproved: mosqueMeeqat.isApproved
+            }
+        };
+
+    } catch (error) {
+        console.error('GetDailyPrayers error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch daily prayers'
+        };
+    }
+};
+
 module.exports = {
     getMosqueMeeqatByMosqueId,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
     updateMosqueMeeqatByMosqueId,
     deleteMosqueMeeqatByMosqueId,
-    getMosqueMeeqatHTML
+    getMosqueMeeqatHTML,
+    getDailyPrayers
 };
