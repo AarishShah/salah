@@ -6,19 +6,19 @@ const jamaatConfigSchema = new mongoose.Schema({
         default: 0,
         min: -120,
         max: 120
-    }, // in minutes
+    },
     fixedTime: {
         type: Number,
         default: null,
         min: 0,
         max: 1439
-    }, // minutes from midnight
+    },
     adhanGap: {
         type: Number,
         default: 10,
         min: 0,
         max: 90
-    }, // minutes before jamaat
+    },
     roundingEnabled: {
         type: Boolean,
         default: true
@@ -55,17 +55,17 @@ const meeqatConfigSchema = new mongoose.Schema({
             type: Number,
             min: 0,
             max: 1439
-        }, // minutes from midnight
+        },
         khutbahStartTime: {
             type: Number,
             min: 0,
             max: 1439
-        }, // minutes from midnight
+        },
         jamaatTime: {
             type: Number,
             min: 0,
             max: 1439
-        } // minutes from midnight
+        }
     },
 
     // Metadata
