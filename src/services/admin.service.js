@@ -1,6 +1,5 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
-const MosqueTimingConfig = require('../models/mosqueTimingConfig.model');
 
 // Admin Services
 const getAllUsers = async (filters) => {

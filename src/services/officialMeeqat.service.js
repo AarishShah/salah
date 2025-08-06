@@ -98,9 +98,18 @@ const getOfficialMeeqatById = async (officialMeeqatId, format = '12h') => {
             };
         }
 
-        // Transform timings based on requested format
         let transformedData = officialMeeqat.toObject();
         
+        // Early return for original format
+        if (format === 'original') {
+            return {
+                status: 'success',
+                data: transformedData,
+                format: 'original'
+            };
+        }
+
+        // Transform timings if they exist
         if (transformedData.timings) {
             const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
             transformedData.timings = formatTimings(transformedData.timings, timeFormat);
@@ -112,6 +121,7 @@ const getOfficialMeeqatById = async (officialMeeqatId, format = '12h') => {
             };
         }
 
+        // Return data if no timings to transform
         return {
             status: 'success',
             data: transformedData
@@ -206,12 +216,12 @@ const createOfficialMeeqat = async (data) => {
 };
 
 // Update official meeqat
-const updateOfficialMeeqat = async (id, updateData) => {
+const updateOfficialMeeqat = async (officialMeeqatId, updateData) => {
     try {
         const { publisher, coordinates, csvBuffer, updatedBy } = updateData;
 
         // Find existing document
-        const existingMeeqat = await OfficialMeeqat.findById(id);
+        const existingMeeqat = await OfficialMeeqat.findById(officialMeeqatId);
         if (!existingMeeqat) {
             return {
                 status: 'failed',
@@ -250,7 +260,7 @@ const updateOfficialMeeqat = async (id, updateData) => {
 
         // Update the document
         const updatedMeeqat = await OfficialMeeqat.findByIdAndUpdate(
-            id,
+            officialMeeqatId,
             updateFields,
             { new: true, runValidators: true }
         )

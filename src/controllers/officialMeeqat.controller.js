@@ -92,7 +92,8 @@ const createOfficialMeeqat = catchError(async (req, res) => {
 
 // Update official meeqat
 const updateOfficialMeeqat = catchError(async (req, res) => {
-    const { id } = req.params;
+    const { officialMeeqatId } = req.params;
+    console.log(`Updating official meeqat with OID: ${officialMeeqatId}`);
     const { userId } = req.user;
     const { publisher, coordinates } = req.body;
 
@@ -107,7 +108,7 @@ const updateOfficialMeeqat = catchError(async (req, res) => {
         updateData.csvBuffer = req.file.buffer;
     }
 
-    const result = await officialMeeqatService.updateOfficialMeeqat(id, updateData);
+    const result = await officialMeeqatService.updateOfficialMeeqat(officialMeeqatId, updateData);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
