@@ -5,7 +5,7 @@ const controller = require("../controllers/mosqueMeeqat.controller");
 const Auth = require("../middleware/auth.middleware");
 
 // Middleware
-const editorAuth = Auth({ allowedRoles: ['editor', 'admin'] });
+const editorAuth = Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true });
 const allAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 
 // --- MosqueMeeqat Routes ---

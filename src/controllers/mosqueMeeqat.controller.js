@@ -17,9 +17,9 @@ const getMosqueMeeqatByMosqueId = catchError(async (req, res) => {
 // Generate new mosqueMeeqat
 const generateMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
 
-    const result = await mosqueMeeqatService.generateMosqueMeeqat(mosqueId, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.generateMosqueMeeqat(mosqueId, userId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -31,9 +31,9 @@ const generateMosqueMeeqat = catchError(async (req, res) => {
 // Approve mosqueMeeqat
 const approveMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
 
-    const result = await mosqueMeeqatService.approveMosqueMeeqat(mosqueId, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.approveMosqueMeeqat(mosqueId, userId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -45,10 +45,10 @@ const approveMosqueMeeqat = catchError(async (req, res) => {
 // Update mosqueMeeqat by mosque ID
 const updateMosqueMeeqatByMosqueId = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
     const updateData = req.body;
 
-    const result = await mosqueMeeqatService.updateMosqueMeeqatByMosqueId(mosqueId, updateData, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.updateMosqueMeeqatByMosqueId(mosqueId, updateData, userId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -60,9 +60,8 @@ const updateMosqueMeeqatByMosqueId = catchError(async (req, res) => {
 // Delete mosqueMeeqat by mosque ID
 const deleteMosqueMeeqatByMosqueId = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { role, assignedMosques } = req.user;
 
-    const result = await mosqueMeeqatService.deleteMosqueMeeqatByMosqueId(mosqueId, role, assignedMosques);
+    const result = await mosqueMeeqatService.deleteMosqueMeeqatByMosqueId(mosqueId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);

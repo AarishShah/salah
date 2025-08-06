@@ -2,12 +2,6 @@ const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
 const generateMeeqatHTML = require('../helpers/meeqatHTMLGenerator');
 
-// Helper function to check mosque access
-const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
-    if (role === 'admin') return true;
-    return assignedMosques.some(id => id.toString() === mosqueId.toString());
-};
-
 // Helper function to add/subtract minutes from time string
 const adjustTime = (timeStr, minutes) => {
     const [hours, mins] = timeStr.split(':').map(Number);
@@ -173,18 +167,8 @@ const getMosqueMeeqatByMosqueId = async (mosqueId) => {
 };
 
 // Generate new mosqueMeeqat
-const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
+const generateMosqueMeeqat = async (mosqueId, userId) => {
     try {
-        // Check mosque access
-        // Verfiy if duplicate document is not being created @Aarish
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Get mosque with references
         const mosque = await Mosque.findById(mosqueId)
             .populate('officialMeeqat')
@@ -272,17 +256,8 @@ const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => 
 };
 
 // Approve mosqueMeeqat
-const approveMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
+const approveMosqueMeeqat = async (mosqueId, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Find active mosqueMeeqat
         const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true });
         if (!mosqueMeeqat) {
@@ -327,17 +302,8 @@ const approveMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
 };
 
 // Update mosqueMeeqat by mosque ID
-const updateMosqueMeeqatByMosqueId = async (mosqueId, updateData, userId, role, assignedMosques) => {
+const updateMosqueMeeqatByMosqueId = async (mosqueId, updateData, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Find active mosqueMeeqat
         const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true });
         if (!mosqueMeeqat) {
@@ -387,17 +353,8 @@ const updateMosqueMeeqatByMosqueId = async (mosqueId, updateData, userId, role, 
 };
 
 // Delete mosqueMeeqat by mosque ID
-const deleteMosqueMeeqatByMosqueId = async (mosqueId, role, assignedMosques) => {
+const deleteMosqueMeeqatByMosqueId = async (mosqueId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
