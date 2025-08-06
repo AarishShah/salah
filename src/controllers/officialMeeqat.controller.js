@@ -93,7 +93,6 @@ const createOfficialMeeqat = catchError(async (req, res) => {
 // Update official meeqat
 const updateOfficialMeeqat = catchError(async (req, res) => {
     const { officialMeeqatId } = req.params;
-    console.log(`Updating official meeqat with OID: ${officialMeeqatId}`);
     const { userId } = req.user;
     const { publisher, coordinates } = req.body;
 
