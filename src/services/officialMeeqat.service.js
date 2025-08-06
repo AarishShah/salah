@@ -1,6 +1,6 @@
 const OfficialMeeqat = require('../models/officialMeeqat.model');
 const { parseCSVBuffer, validateCSVData, convertCSVToTimings } = require('../helpers/parseCSVBuffer');
-const { formatTime } = require("../helpers/officialMeeqatFormatter.helper");
+const { formatTime } = require("../helpers/officialMeeqatFormatTime.helper");
 
 // Get all official meeqats with filters
 const getAllOfficialMeeqats = async (filters, pagination) => {
