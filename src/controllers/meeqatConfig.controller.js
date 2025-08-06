@@ -5,8 +5,9 @@ const catchError = require("../utils/catchError");
 const getConfigByMosqueId = catchError(async (req, res) => {
     const { mosqueId } = req.params;
     const { role, assignedMosques } = req.user;
+    const { format = '12h' } = req.query;
 
-    const result = await meeqatConfigService.getConfigByMosqueId(mosqueId, role, assignedMosques);
+    const result = await meeqatConfigService.getConfigByMosqueId(mosqueId, role, assignedMosques, format);
 
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
