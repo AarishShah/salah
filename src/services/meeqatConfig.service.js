@@ -3,24 +3,9 @@ const Mosque = require('../models/mosque.model');
 const { formatTime } = require('../helpers/meeqatConfigFormatTime.helper');
 const { processTimeFields } = require('../helpers/meeqatConfigProcessTime.helper');
 
-// Helper function to check mosque access
-const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
-    if (role === 'admin') return true;
-    return assignedMosques.some(id => id.toString() === mosqueId.toString());
-};
-
 // Get config by mosque ID with optional format transformation
-const getConfigByMosqueId = async (mosqueId, role, assignedMosques, format = '12h') => {
+const getConfigByMosqueId = async (mosqueId, format = '12h') => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
@@ -76,17 +61,8 @@ const getConfigByMosqueId = async (mosqueId, role, assignedMosques, format = '12
 };
 
 // Create new config
-const createConfig = async (mosqueId, configData, userId, role, assignedMosques) => {
+const createConfig = async (mosqueId, configData, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
@@ -150,17 +126,8 @@ const createConfig = async (mosqueId, configData, userId, role, assignedMosques)
 };
 
 // Update config by mosque ID
-const updateConfigByMosqueId = async (mosqueId, updateData, userId, role, assignedMosques) => {
+const updateConfigByMosqueId = async (mosqueId, updateData, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Find config by mosque ID
         const config = await MeeqatConfig.findOne({ mosque: mosqueId });
         if (!config) {
@@ -212,17 +179,8 @@ const updateConfigByMosqueId = async (mosqueId, updateData, userId, role, assign
 };
 
 // Delete config by mosque ID
-const deleteConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
+const deleteConfigByMosqueId = async (mosqueId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {

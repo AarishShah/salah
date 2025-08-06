@@ -5,7 +5,7 @@ const controller = require("../controllers/meeqatConfig.controller");
 const Auth = require("../middleware/auth.middleware");
 
 // Middleware for editors and admins
-const editorAuth = Auth({ allowedRoles: ['editor', 'admin'] });
+const editorAuth = Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true });
 
 // --- MeeqatConfig Routes ---
 router
