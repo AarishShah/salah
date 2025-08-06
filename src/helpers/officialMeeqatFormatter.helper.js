@@ -2,7 +2,7 @@
 
 const { minutesToTimeString12h, minutesToTimeString24h } = require('../utils/timeUtils');
 
-const formatter = (timings, format = '12h') => {
+const formatTime = (timings, format = '12h') => {
     const formatter = format === '24h' ? minutesToTimeString24h : minutesToTimeString12h;
 
     return timings.map(timing => ({
@@ -18,4 +18,4 @@ const formatter = (timings, format = '12h') => {
     }));
 };
 
-module.exports = { formatter };
+module.exports = { formatTime };

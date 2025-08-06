@@ -1,6 +1,6 @@
 const OfficialMeeqat = require('../models/officialMeeqat.model');
 const { parseCSVBuffer, validateCSVData, convertCSVToTimings } = require('../helpers/parseCSVBuffer');
-const { formatter } = require("../helpers/officialMeeqatFormatter.helper");
+const { formatTime } = require("../helpers/officialMeeqatFormatter.helper");
 
 // Get all official meeqats with filters
 const getAllOfficialMeeqats = async (filters, pagination) => {
@@ -112,7 +112,7 @@ const getOfficialMeeqatById = async (officialMeeqatId, format = '12h') => {
         // Transform timings if they exist
         if (transformedData.timings) {
             const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
-            transformedData.timings = formatter(transformedData.timings, timeFormat);
+            transformedData.timings = formatTime(transformedData.timings, timeFormat);
             
             return {
                 status: 'success',
