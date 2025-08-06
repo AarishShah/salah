@@ -1,6 +1,6 @@
 const MeeqatConfig = require('../models/meeqatConfig.model');
 const Mosque = require('../models/mosque.model');
-const { formatMeeqatConfig } = require('../helpers/configTimeFormatters');
+const { formatter } = require('../helpers/meeqatConfigFormatter.helper');
 
 // Helper function to check mosque access
 const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
@@ -120,7 +120,7 @@ const getConfigByMosqueId = async (mosqueId, role, assignedMosques, format = '12
 
         // Transform time fields
         const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
-        responseConfig = formatMeeqatConfig(responseConfig, timeFormat);
+        responseConfig = formatter(responseConfig, timeFormat);
 
         return {
             status: 'success',
