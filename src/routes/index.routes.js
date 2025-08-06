@@ -9,7 +9,7 @@ const userRoutes = require("./user.routes");
 const editorRequestRoutes = require("./editorRequest.routes");
 const adminRoutes = require("./admin.routes");
 const mosqueMapRoutes = require('./mosque.routes');
-const prayerTimingRoutes = require("./prayerTiming.routes");
+// const prayerTimingRoutes = require("./prayerTiming.routes");
 const officialMeeqatRoutes = require("./officialMeeqat.routes");
 const meeqatConfigRoutes = require("./meeqatConfig.routes");
 const mosqueMeeqatRoutes = require("./mosqueMeeqat.routes");
@@ -24,7 +24,7 @@ router.use('/api/users', userRoutes);
 router.use('/api/editorRequest', editorRequestRoutes); // might need to move this to user routes
 router.use('/api/admin', adminRoutes);
 router.use('/api/mosque', mosqueMapRoutes);
-router.use('/api/prayer-timings', prayerTimingRoutes);
+// router.use('/api/prayer-timings', prayerTimingRoutes);
 router.use('/api/official-meeqat', officialMeeqatRoutes);
 router.use('/api/meeqat-config', meeqatConfigRoutes);
 router.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
