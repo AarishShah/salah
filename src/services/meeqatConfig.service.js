@@ -1,5 +1,6 @@
 const MeeqatConfig = require('../models/meeqatConfig.model');
 const Mosque = require('../models/mosque.model');
+const { formatMeeqatConfig } = require('../helpers/configTimeFormatters');
 
 // Helper function to check mosque access
 const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
@@ -70,8 +71,8 @@ const processTimeFields = (data) => {
     }
 };
 
-// Get config by mosque ID
-const getConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
+// Get config by mosque ID with optional format transformation
+const getConfigByMosqueId = async (mosqueId, role, assignedMosques, format = '12h') => {
     try {
         // Check mosque access
         if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
@@ -106,9 +107,25 @@ const getConfigByMosqueId = async (mosqueId, role, assignedMosques) => {
             };
         }
 
+        let responseConfig = config.toObject();
+        
+        // Early return for original format (no transformation)
+        if (format === 'original') {
+            return {
+                status: 'success',
+                config: responseConfig,
+                format: 'original'
+            };
+        }
+
+        // Transform time fields
+        const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
+        responseConfig = formatMeeqatConfig(responseConfig, timeFormat);
+
         return {
             status: 'success',
-            config
+            config: responseConfig,
+            format: timeFormat
         };
     } catch (error) {
         console.error('GetConfigByMosqueId error:', error);
