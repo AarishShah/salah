@@ -236,8 +236,7 @@ const setOfficialMeeqat = async (data) => {
             };
         }
 
-        // Validate school of thought compatibility (for Sunni only)
-        if (mosque.sect === 'sunni' && mosque.schoolOfThought !== officialMeeqat.schoolOfThought) {
+        if (mosque.schoolOfThought !== officialMeeqat.schoolOfThought) {
             return {
                 status: 'failed',
                 code: 400,
@@ -308,7 +307,7 @@ const createMosque = async (data) => {
             locality,
             coordinates,
             sect,
-            schoolOfThought: sect === 'sunni' ? schoolOfThought : undefined,
+            schoolOfThought,
             createdBy
         });
 
