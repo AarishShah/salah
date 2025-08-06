@@ -19,9 +19,10 @@ const jamaatConfigSchema = new mongoose.Schema({
         min: 0,
         max: 90
     },
-    roundingEnabled: {
-        type: Boolean,
-        default: true
+    roundingInterval: {  // Changed from roundingEnabled boolean
+        type: Number,
+        enum: [0, 5, 10, 15],
+        default: 5
     }
 }, { _id: false });
 
@@ -42,20 +43,9 @@ const meeqatConfigSchema = new mongoose.Schema({
         isha: { type: jamaatConfigSchema, default: () => ({}) }
     },
 
-    // Global rounding interval (5, 10, or 15 minutes)
-    roundingInterval: {
-        type: Number,
-        enum: [5, 10, 15],
-        default: 5
-    },
-
     // Jummah (Friday) salah settings
     jummah: {
-        adhanTime: {
-            type: Number,
-            min: 0,
-            max: 1439
-        },
+        // adhanTime: collect this from official meeqat
         khutbahStartTime: {
             type: Number,
             min: 0,
