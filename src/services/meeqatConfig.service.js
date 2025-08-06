@@ -56,7 +56,7 @@ const processTimeFields = (data) => {
         
         // Process jummah times
         if (processedData.jummah) {
-            const jummahFields = ['adhanTime', 'khutbahStartTime', 'jamaatTime'];
+            const jummahFields = ['khutbahStartTime', 'jamaatTime'];
             jummahFields.forEach(field => {
                 if (processedData.jummah[field] !== undefined) {
                     processedData.jummah[field] = convertTimeToMinutes(processedData.jummah[field]);
