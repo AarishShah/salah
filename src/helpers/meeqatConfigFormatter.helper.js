@@ -2,7 +2,7 @@
 
 const { minutesToTimeString12h, minutesToTimeString24h } = require('../utils/timeUtils');
 
-const formatter = (config, format = '12h') => {
+const formatTime = (config, format = '12h') => {
     const formatter = format === '24h' ? minutesToTimeString24h : minutesToTimeString12h;
     const formattedConfig = JSON.parse(JSON.stringify(config)); // Deep clone
 
@@ -29,4 +29,4 @@ const formatter = (config, format = '12h') => {
     return formattedConfig;
 };
 
-module.exports = { formatter };
+module.exports = { formatTime };
