@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
+const Mosque = require('../models/mosque.model');
 
 // Admin Services
 const getAllUsers = async (filters) => {
@@ -288,6 +289,12 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
             user.role = 'editor';
             user.assignedMosques = request.requestedMosques;
             await user.save();
+
+            // ADDED: Update contact person in each assigned mosque
+            await Mosque.updateMany(
+                { _id: { $in: request.requestedMosques } },
+                { $set: { contactPerson: user._id } }
+            );
 
             // Update request
             request.status = 'approved';
