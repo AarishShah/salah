@@ -1,5 +1,5 @@
 // Helper function for Mosuqe Meeqat
-const { applySmartRounding } = require('./roundingUtils');
+const { applySmartRounding } = require('./roundingHelpers');
 
 // Generate timings with smart rounding
 const generateTimings = (officialTimings, config) => {

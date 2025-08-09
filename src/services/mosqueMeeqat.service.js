@@ -1,8 +1,8 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
 const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateHelpers');
-const { formatTimings } = require('../helpers/mosqueMeeqat/timeFormatUtils');
-const { generateTimings } = require('../helpers/mosqueMeeqat/meeqatGenerator');
+const { formatTimings } = require('../helpers/mosqueMeeqat/timeFormatHelpers');
+const { generateTimings } = require('../helpers/mosqueMeeqat/meeqatGeneratorHelpers');
 const { buildMosqueMeeqatPipeline } = require('../helpers/mosqueMeeqat/pipelineHelpers');
 const { generateMosqueMeeqatHTML } = require('../helpers/mosqueMeeqat/htmlHelpers');
 
