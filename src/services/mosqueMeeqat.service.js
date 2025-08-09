@@ -1,6 +1,7 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
-const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateUtils');
+// const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateUtils');
+const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateHelpers');
 const { formatTimings } = require('../helpers/mosqueMeeqat/timeFormatUtils');
 const { generateTimings } = require('../helpers/mosqueMeeqat/meeqatGenerator');
 
@@ -19,14 +20,94 @@ const getMosqueMeeqat = async (mosqueId, options = {}) => {
             };
         }
 
-        // Find active mosque meeqat
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
-            .populate('mosque', 'name address locality')
-            .populate('sourceOfficialMeeqat', 'locationName publisher sect schoolOfThought')
-            .populate('generatedBy', 'name email')
-            .populate('approvedBy', 'name email');
+        // Convert dates to day numbers
+        const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
 
-        if (!mosqueMeeqat) {
+        // Build aggregation pipeline to filter timings at database level
+        const pipeline = [
+            {
+                $match: {
+                    mosque: mosque._id
+                }
+            },
+            {
+                $addFields: {
+                    timings: {
+                        $filter: {
+                            input: "$timings",
+                            cond: {
+                                $and: [
+                                    { $gte: ["$$this.dayNumber", startDay] },
+                                    { $lte: ["$$this.dayNumber", endDay] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'mosques',
+                    localField: 'mosque',
+                    foreignField: '_id',
+                    as: 'mosque',
+                    pipeline: [
+                        { $project: { name: 1, address: 1, locality: 1 } }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'officialmeeqats',
+                    localField: 'sourceOfficialMeeqat',
+                    foreignField: '_id',
+                    as: 'sourceOfficialMeeqat',
+                    pipeline: [
+                        { $project: { locationName: 1, publisher: 1, sect: 1, schoolOfThought: 1 } }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'generatedBy',
+                    foreignField: '_id',
+                    as: 'generatedBy',
+                    pipeline: [
+                        { $project: { name: 1, email: 1 } }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'approvedBy',
+                    foreignField: '_id',
+                    as: 'approvedBy',
+                    pipeline: [
+                        { $project: { name: 1, email: 1 } }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    mosque: { $arrayElemAt: ['$mosque', 0] },
+                    sourceOfficialMeeqat: { $arrayElemAt: ['$sourceOfficialMeeqat', 0] },
+                    version: 1,
+                    generatedAt: 1,
+                    generatedBy: { $arrayElemAt: ['$generatedBy', 0] },
+                    isApproved: 1,
+                    approvedBy: { $arrayElemAt: ['$approvedBy', 0] },
+                    approvedAt: 1,
+                    timings: 1
+                }
+            }
+        ];
+
+        const result = await MosqueMeeqat.aggregate(pipeline);
+
+        if (!result || result.length === 0) {
             return {
                 status: 'failed',
                 code: 404,
@@ -34,16 +115,10 @@ const getMosqueMeeqat = async (mosqueId, options = {}) => {
             };
         }
 
-        // Get date range
-        const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
+        const mosqueMeeqat = result[0];
 
-        // Filter timings by dayNumber range
-        let filteredTimings = mosqueMeeqat.timings.filter(timing => 
-            timing.dayNumber >= startDay && timing.dayNumber <= endDay
-        );
-
-        // Apply time format conversion
-        filteredTimings = formatTimings(filteredTimings, timeFormat);
+        // Apply time format conversion to filtered timings
+        const formattedTimings = formatTimings(mosqueMeeqat.timings, timeFormat);
 
         return {
             status: 'success',
@@ -57,14 +132,14 @@ const getMosqueMeeqat = async (mosqueId, options = {}) => {
                 isApproved: mosqueMeeqat.isApproved,
                 approvedBy: mosqueMeeqat.approvedBy,
                 approvedAt: mosqueMeeqat.approvedAt,
-                timings: filteredTimings
+                timings: formattedTimings
             },
             dateRange: {
                 startDate: startDate || 'Full year',
                 endDate: endDate || 'Full year',
                 startDayNumber: startDay,
                 endDayNumber: endDay,
-                totalDays: filteredTimings.length
+                totalDays: formattedTimings.length
             },
             timeFormat
         };
