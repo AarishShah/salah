@@ -1,7 +1,7 @@
 const MeeqatConfig = require('../models/meeqatConfig.model');
 const Mosque = require('../models/mosque.model');
-const { formatTime } = require('../helpers/meeqatConfigFormatTime.helper');
-const { processTimeFields } = require('../helpers/meeqatConfigProcessTime.helper');
+const { formatTime } = require('../helpers/meeqatConfig/meeqatConfigFormatTime.helper');
+const { processTimeFields } = require('../helpers/meeqatConfig/meeqatConfigProcessTime.helper');
 
 // Get config by mosque ID with optional format transformation
 const getConfigByMosqueId = async (mosqueId, format = '12h') => {
