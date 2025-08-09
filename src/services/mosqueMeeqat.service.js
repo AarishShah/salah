@@ -1,9 +1,10 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
-// const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateUtils');
 const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateHelpers');
 const { formatTimings } = require('../helpers/mosqueMeeqat/timeFormatUtils');
 const { generateTimings } = require('../helpers/mosqueMeeqat/meeqatGenerator');
+const { buildMosqueMeeqatPipeline } = require('../helpers/mosqueMeeqat/pipelineHelpers');
+const { generateMosqueMeeqatHTML } = require('../helpers/mosqueMeeqat/htmlHelpers');
 
 // Get mosque meeqat with filtering and formatting
 const getMosqueMeeqat = async (mosqueId, options = {}) => {
@@ -23,88 +24,8 @@ const getMosqueMeeqat = async (mosqueId, options = {}) => {
         // Convert dates to day numbers
         const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
 
-        // Build aggregation pipeline to filter timings at database level
-        const pipeline = [
-            {
-                $match: {
-                    mosque: mosque._id
-                }
-            },
-            {
-                $addFields: {
-                    timings: {
-                        $filter: {
-                            input: "$timings",
-                            cond: {
-                                $and: [
-                                    { $gte: ["$$this.dayNumber", startDay] },
-                                    { $lte: ["$$this.dayNumber", endDay] }
-                                ]
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'mosques',
-                    localField: 'mosque',
-                    foreignField: '_id',
-                    as: 'mosque',
-                    pipeline: [
-                        { $project: { name: 1, address: 1, locality: 1 } }
-                    ]
-                }
-            },
-            {
-                $lookup: {
-                    from: 'officialmeeqats',
-                    localField: 'sourceOfficialMeeqat',
-                    foreignField: '_id',
-                    as: 'sourceOfficialMeeqat',
-                    pipeline: [
-                        { $project: { locationName: 1, publisher: 1, sect: 1, schoolOfThought: 1 } }
-                    ]
-                }
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'generatedBy',
-                    foreignField: '_id',
-                    as: 'generatedBy',
-                    pipeline: [
-                        { $project: { name: 1, email: 1 } }
-                    ]
-                }
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'approvedBy',
-                    foreignField: '_id',
-                    as: 'approvedBy',
-                    pipeline: [
-                        { $project: { name: 1, email: 1 } }
-                    ]
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    mosque: { $arrayElemAt: ['$mosque', 0] },
-                    sourceOfficialMeeqat: { $arrayElemAt: ['$sourceOfficialMeeqat', 0] },
-                    version: 1,
-                    generatedAt: 1,
-                    generatedBy: { $arrayElemAt: ['$generatedBy', 0] },
-                    isApproved: 1,
-                    approvedBy: { $arrayElemAt: ['$approvedBy', 0] },
-                    approvedAt: 1,
-                    timings: 1
-                }
-            }
-        ];
-
+        // Use the helper pipeline
+        const pipeline = buildMosqueMeeqatPipeline(mosque._id, startDay, endDay);
         const result = await MosqueMeeqat.aggregate(pipeline);
 
         if (!result || result.length === 0) {
@@ -156,101 +77,64 @@ const getMosqueMeeqat = async (mosqueId, options = {}) => {
 // Generate HTML for download
 const generateMeeqatHTML = async (mosqueId, options = {}) => {
     try {
-        // Get the data first
-        const result = await getMosqueMeeqat(mosqueId, options);
+        const { startDate, endDate, timeFormat = '12h' } = options;
 
-        if (result.status === 'failed') {
-            return result;
+        // Check if mosque exists
+        const mosque = await Mosque.findById(mosqueId);
+        if (!mosque) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
         }
 
-        const { mosqueMeeqat, dateRange, timeFormat } = result;
+        // Convert dates to day numbers
+        const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
 
-        // Generate filename
-        const mosqueName = mosqueMeeqat.mosque.name.replace(/[^a-zA-Z0-9]/g, '-');
-        const dateString = dateRange.startDate === 'Full year' ? 'Full-Year' : 
-            `${dateRange.startDate}-to-${dateRange.endDate}`;
-        const filename = `${mosqueName}-Meeqat-${dateString}-${timeFormat}.html`;
+        // Use the same pipeline
+        const pipeline = buildMosqueMeeqatPipeline(mosque._id, startDay, endDay);
+        const result = await MosqueMeeqat.aggregate(pipeline);
 
-        // Generate HTML content
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>${mosqueMeeqat.mosque.name} - Prayer Timetable</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .info { margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #4CAF50; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        .edited { background-color: #fff3cd; }
-        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>${mosqueMeeqat.mosque.name}</h1>
-        <h2>Prayer Timetable</h2>
-        <p>${mosqueMeeqat.mosque.address}, ${mosqueMeeqat.mosque.locality}</p>
-    </div>
+        if (!result || result.length === 0) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'No active mosque meeqat found for this mosque'
+            };
+        }
 
-    <div class="info">
-        <strong>Date Range:</strong> ${dateRange.startDate} to ${dateRange.endDate} (${dateRange.totalDays} days)<br>
-        <strong>Time Format:</strong> ${timeFormat.toUpperCase()}<br>
-        <strong>Source:</strong> ${mosqueMeeqat.sourceOfficialMeeqat.locationName} - ${mosqueMeeqat.sourceOfficialMeeqat.publisher}<br>
-        <strong>Generated:</strong> ${new Date(mosqueMeeqat.generatedAt).toLocaleDateString()}<br>
-        <strong>Status:</strong> ${mosqueMeeqat.isApproved ? 'Approved' : 'Pending Approval'}
-    </div>
+        const mosqueMeeqat = result[0];
+        const formattedTimings = formatTimings(mosqueMeeqat.timings, timeFormat);
 
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Day</th>
-                <th>Fajr</th>
-                <th>Sunrise</th>
-                <th>Dhuhr</th>
-                <th>Asr</th>
-                <th>Maghrib</th>
-                <th>Isha</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${mosqueMeeqat.timings.map(timing => `
-                <tr class="${timing.isManuallyEdited ? 'edited' : ''}">
-                    <td>${timing.date_csv}</td>
-                    <td>${timing.dayNumber}</td>
-                    <td>${timing.fajr}</td>
-                    <td>${timing.sunrise}</td>
-                    <td>${timing.dhuhr}</td>
-                    <td>${timing.asr}</td>
-                    <td>${timing.maghrib}</td>
-                    <td>${timing.isha}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-    </table>
+        // Prepare data for HTML
+        const mosqueMeeqatForHTML = {
+            ...mosqueMeeqat,
+            timings: formattedTimings
+        };
 
-    <div class="footer">
-        <p>Generated on ${new Date().toLocaleString()}</p>
-        <p>Version: ${mosqueMeeqat.version}</p>
-    </div>
-</body>
-</html>`;
+        const dateRange = {
+            startDate: startDate || 'Full year',
+            endDate: endDate || 'Full year',
+            startDayNumber: startDay,
+            endDayNumber: endDay,
+            totalDays: formattedTimings.length
+        };
+
+        // Generate HTML
+        const html = generateMosqueMeeqatHTML(mosqueMeeqatForHTML, dateRange, timeFormat);
 
         return {
             status: 'success',
-            html,
-            filename
+            html: html
         };
+
     } catch (error) {
-        console.error('GenerateMeeqatHTML error:', error);
+        console.error('GetMosqueMeeqatHTML error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to generate HTML'
+            message: 'Failed to generate mosque meeqat HTML'
         };
     }
 };
