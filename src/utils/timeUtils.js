@@ -1,4 +1,4 @@
-// helpers/timeUtils.js
+// utils/timeUtils.js
 
 const minutesToTimeString12h = (minutes) => {
     if (minutes === null || minutes === undefined) return null;
