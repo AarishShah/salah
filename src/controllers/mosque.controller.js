@@ -90,7 +90,7 @@ const getMosqueById = catchError(async (req, res) => {
 
 // Set official meeqat for mosque
 const setOfficialMeeqat = catchError(async (req, res) => {
-    const { id } = req.params;
+    const { mosqueId } = req.params;
     const { officialMeeqatId } = req.body;
     const { userId, role } = req.user;
 
@@ -103,7 +103,7 @@ const setOfficialMeeqat = catchError(async (req, res) => {
     }
 
     const data = {
-        mosqueId: id,
+        mosqueId,
         officialMeeqatId,
         userId,
         userRole: role
