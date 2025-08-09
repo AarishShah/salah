@@ -11,10 +11,8 @@ const prayerTimingSchemas = require('./schemas/prayerTiming');
 const adminSchemas = require('./schemas/admin');
 const editorRequestSchemas = require('./schemas/editorRequest');
 const commonSchemas = require('./schemas/common');
-const baseTimingSchemas = require('./schemas/baseTiming');
 const meeqatConfigSchemas = require('./schemas/meeqatConfig');
 const mosqueMeeqatSchemas = require('./schemas/mosqueMeeqat');
-const mosqueTimingConfigSchemas = require('./schemas/mosqueTimingConfig');
 const officialMeeqatSchemas = require('./schemas/officialMeeqat');
 
 // Import path documentation
@@ -24,10 +22,8 @@ const mosquePaths = require('./paths/mosque');
 const prayerTimingPaths = require('./paths/prayerTiming');
 const adminPaths = require('./paths/admin');
 const editorRequestPaths = require('./paths/editorRequest');
-const baseTimingPaths = require('./paths/baseTiming');
 const meeqatConfigPaths = require('./paths/meeqatConfig');
 const mosqueMeeqatPaths = require('./paths/mosqueMeeqat');
-const mosqueTimingConfigPaths = require('./paths/mosqueTimingConfig');
 const officialMeeqatPaths = require('./paths/officialMeeqat');
 
 // Create the OpenAPI specification
@@ -72,10 +68,8 @@ const swaggerSpec = {
       ...prayerTimingSchemas,
       ...adminSchemas,
       ...editorRequestSchemas,
-      ...baseTimingSchemas,
       ...meeqatConfigSchemas,
       ...mosqueMeeqatSchemas,
-      ...mosqueTimingConfigSchemas,
       ...officialMeeqatSchemas
     },
     responses: {
@@ -183,14 +177,6 @@ const swaggerSpec = {
       description: 'Editor role request management'
     },
     {
-      name: 'MosqueTimingConfig',
-      description: 'Mosque timing configuration'
-    },
-    {
-      name: 'BaseTiming',
-      description: 'Base timing operations'
-    },
-    {
       name: 'OfficialMeeqat',
       description: 'Official Meeqat management'
     },
@@ -211,10 +197,8 @@ const swaggerSpec = {
     ...prayerTimingPaths,
     ...adminPaths,
     ...editorRequestPaths,
-    ...baseTimingPaths,
     ...meeqatConfigPaths,
     ...mosqueMeeqatPaths,
-    ...mosqueTimingConfigPaths,
     ...officialMeeqatPaths
   }
 };

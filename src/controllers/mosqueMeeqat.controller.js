@@ -1,11 +1,15 @@
 const mosqueMeeqatService = require("../services/mosqueMeeqat.service");
 const catchError = require("../utils/catchError");
 
-// Get mosqueMeeqat by mosque ID
-const getMosqueMeeqatByMosqueId = catchError(async (req, res) => {
+// Get mosque meeqat with date range and format options
+const getMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
+    const { startDate, endDate, timeFormat = '12h' } = req.query;
 
-    const result = await mosqueMeeqatService.getMosqueMeeqatByMosqueId(mosqueId);
+    const result = await mosqueMeeqatService.getMosqueMeeqat(
+        mosqueId, 
+        { startDate, endDate, timeFormat }
+    );
 
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
@@ -14,12 +18,45 @@ const getMosqueMeeqatByMosqueId = catchError(async (req, res) => {
     return res.json(result);
 });
 
-// Generate new mosqueMeeqat
+// Download HTML file
+const downloadMeeqatHTML = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { startDate, endDate, timeFormat = '12h' } = req.query;
+
+    const result = await mosqueMeeqatService.generateMeeqatHTML(
+        mosqueId,
+        { startDate, endDate, timeFormat }
+    );
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 404).send(`
+            <html>
+                <head><title>Error</title></head>
+                <body>
+                    <h1>Error - ${result.code}</h1>
+                    <p>${result.message}</p>
+                </body>
+            </html>
+        `);
+    }
+
+    // Set headers for file download
+    const filename = result.filename || 'mosque-meeqat.html';
+    res.set({
+        'Content-Type': 'text/html',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'no-cache'
+    });
+
+    return res.send(result.html);
+});
+
+// Generate new mosque meeqat
 const generateMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
 
-    const result = await mosqueMeeqatService.generateMosqueMeeqat(mosqueId, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.generateMosqueMeeqat(mosqueId, userId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -28,12 +65,12 @@ const generateMosqueMeeqat = catchError(async (req, res) => {
     return res.status(201).json(result);
 });
 
-// Approve mosqueMeeqat
+// Approve mosque meeqat
 const approveMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
 
-    const result = await mosqueMeeqatService.approveMosqueMeeqat(mosqueId, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.approveMosqueMeeqat(mosqueId, userId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -42,13 +79,17 @@ const approveMosqueMeeqat = catchError(async (req, res) => {
     return res.json(result);
 });
 
-// Update mosqueMeeqat by mosque ID
-const updateMosqueMeeqatByMosqueId = catchError(async (req, res) => {
+// Update mosque meeqat (day-specific or bulk updates)
+const updateMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId, role, assignedMosques } = req.user;
+    const { userId } = req.user;
     const updateData = req.body;
 
-    const result = await mosqueMeeqatService.updateMosqueMeeqatByMosqueId(mosqueId, updateData, userId, role, assignedMosques);
+    const result = await mosqueMeeqatService.updateMosqueMeeqat(
+        mosqueId, 
+        updateData, 
+        userId
+    );
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -57,48 +98,11 @@ const updateMosqueMeeqatByMosqueId = catchError(async (req, res) => {
     return res.json(result);
 });
 
-// Delete mosqueMeeqat by mosque ID
-const deleteMosqueMeeqatByMosqueId = catchError(async (req, res) => {
+// Permanently delete mosque meeqat
+const deleteMosqueMeeqat = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { role, assignedMosques } = req.user;
 
-    const result = await mosqueMeeqatService.deleteMosqueMeeqatByMosqueId(mosqueId, role, assignedMosques);
-
-    if (result.status === 'failed') {
-        return res.status(result.code || 400).json(result);
-    }
-
-    return res.json(result);
-});
-
-// Add this to your controller file
-const getMosqueMeeqatHTML = catchError(async (req, res) => {
-    const { mosqueId } = req.params;
-    const { month, year } = req.query; // Optional filters
-
-    const result = await mosqueMeeqatService.getMosqueMeeqatHTML(mosqueId, { month, year });
-
-    if (result.status === 'failed') {
-        return res.status(result.code || 404).send(`
-            <html>
-                <head><title>Error</title></head>
-                <body>
-                    <h1>Error</h1>
-                    <p>${result.message}</p>
-                </body>
-            </html>
-        `);
-    }
-
-    res.set('Content-Type', 'text/html');
-    return res.send(result.html);
-});
-
-const getDailyPrayers = catchError(async (req, res) => {
-    const { mosqueId } = req.params;
-    const { startDate, endDate } = req.query;
-
-    const result = await mosqueMeeqatService.getDailyPrayers(mosqueId, startDate, endDate);
+    const result = await mosqueMeeqatService.deleteMosqueMeeqat(mosqueId);
 
     if (result.status === 'failed') {
         return res.status(result.code || 400).json(result);
@@ -108,11 +112,10 @@ const getDailyPrayers = catchError(async (req, res) => {
 });
 
 module.exports = {
-    getMosqueMeeqatByMosqueId,
+    getMosqueMeeqat,
+    downloadMeeqatHTML,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
-    updateMosqueMeeqatByMosqueId,
-    deleteMosqueMeeqatByMosqueId,
-    getMosqueMeeqatHTML,
-    getDailyPrayers,
+    updateMosqueMeeqat,
+    deleteMosqueMeeqat
 };

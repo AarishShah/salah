@@ -1,5 +1,6 @@
 const OfficialMeeqat = require('../models/officialMeeqat.model');
-const { parseCSVBuffer, validateCSVData, convertCSVToTimings } = require('../helpers/parseCSVBuffer');
+const { parseCSVBuffer, validateCSVData, convertCSVToTimings } = require('../helpers/officialMeeqat/parseCSVBuffer');
+const { formatTime } = require("../helpers/officialMeeqat/officialMeeqatFormatTime.helper");
 
 // Get all official meeqats with filters
 const getAllOfficialMeeqats = async (filters, pagination) => {
@@ -82,10 +83,10 @@ const getAllOfficialMeeqats = async (filters, pagination) => {
     }
 };
 
-// Get official meeqat by ID
-const getOfficialMeeqatById = async (id) => {
+// Get official meeqat by ID with optional format transformation
+const getOfficialMeeqatById = async (officialMeeqatId, format = '12h') => {
     try {
-        const officialMeeqat = await OfficialMeeqat.findById(id)
+        const officialMeeqat = await OfficialMeeqat.findById(officialMeeqatId)
             .populate('createdBy', 'name email')
             .populate('updatedBy', 'name email');
 
@@ -97,9 +98,33 @@ const getOfficialMeeqatById = async (id) => {
             };
         }
 
+        let transformedData = officialMeeqat.toObject();
+        
+        // Early return for original format
+        if (format === 'original') {
+            return {
+                status: 'success',
+                data: transformedData,
+                format: 'original'
+            };
+        }
+
+        // Transform timings if they exist
+        if (transformedData.timings) {
+            const timeFormat = format === '24h' ? '24h' : '12h'; // Default to 12h
+            transformedData.timings = formatTime(transformedData.timings, timeFormat);
+            
+            return {
+                status: 'success',
+                data: transformedData,
+                format: timeFormat // Include format info in response
+            };
+        }
+
+        // Return data if no timings to transform
         return {
             status: 'success',
-            data: officialMeeqat
+            data: transformedData
         };
     } catch (error) {
         console.error('GetOfficialMeeqatById error:', error);
@@ -117,17 +142,17 @@ const createOfficialMeeqat = async (data) => {
         const { locationName, sect, schoolOfThought, publisher, coordinates, csvBuffer, createdBy } = data;
 
         // Check if combination already exists
-        const existingQuery = { locationName, sect };
-        if (sect === 'sunni') {
-            existingQuery.schoolOfThought = schoolOfThought;
-        }
-
-        const existing = await OfficialMeeqat.findOne(existingQuery);
+        const existing = await OfficialMeeqat.findOne({ 
+            locationName, 
+            sect, 
+            schoolOfThought 
+        });
+        
         if (existing) {
             return {
                 status: 'failed',
                 code: 409,
-                message: `Official meeqat already exists for ${locationName} - ${sect}${sect === 'sunni' ? ' - ' + schoolOfThought : ''}`
+                message: `Official meeqat already exists for ${locationName} - ${sect} - ${schoolOfThought}`
             };
         }
 
@@ -144,14 +169,14 @@ const createOfficialMeeqat = async (data) => {
             };
         }
 
-        // Convert CSV to timings format
+        // Convert CSV to timings format with smart AM/PM interpretation
         const timings = convertCSVToTimings(csvData);
 
         // Create new official meeqat
         const newOfficialMeeqat = new OfficialMeeqat({
             locationName,
             sect,
-            schoolOfThought: sect === 'sunni' ? schoolOfThought : undefined,
+            schoolOfThought,
             publisher,
             coordinates,
             timings,
@@ -191,12 +216,12 @@ const createOfficialMeeqat = async (data) => {
 };
 
 // Update official meeqat
-const updateOfficialMeeqat = async (id, updateData) => {
+const updateOfficialMeeqat = async (officialMeeqatId, updateData) => {
     try {
         const { publisher, coordinates, csvBuffer, updatedBy } = updateData;
 
         // Find existing document
-        const existingMeeqat = await OfficialMeeqat.findById(id);
+        const existingMeeqat = await OfficialMeeqat.findById(officialMeeqatId);
         if (!existingMeeqat) {
             return {
                 status: 'failed',
@@ -235,7 +260,7 @@ const updateOfficialMeeqat = async (id, updateData) => {
 
         // Update the document
         const updatedMeeqat = await OfficialMeeqat.findByIdAndUpdate(
-            id,
+            officialMeeqatId,
             updateFields,
             { new: true, runValidators: true }
         )

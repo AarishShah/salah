@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 
 const dailyTimingSchema = new mongoose.Schema({
     date_csv: { type: String, required: true }, // "1-Jan" format from CSV
-    dayNumber: { type: Number, required: true, min: 1, max: 366 }, // Day of year
-    fajr: { type: String, required: true }, // HH:MM
-    sunrise: { type: String, required: true },
-    zenith: { type: String, required: true },
-    dhuhr: { type: String, required: true },
-    asr: { type: String, required: true },
-    maghrib: { type: String, required: true },
-    isha: { type: String, required: true }
+    dayNumber: { type: Number, required: true }, // Day of year (1-366)
+    fajr: { type: Number, required: true, min: 0, max: 1439 }, // Minutes from midnight (0-1439)
+    sunrise: { type: Number, required: true, min: 0, max: 1439 },
+    zenith: { type: Number, required: true, min: 0, max: 1439 },
+    dhuhr: { type: Number, required: true, min: 0, max: 1439 },
+    asr: { type: Number, required: true, min: 0, max: 1439 },
+    maghrib: { type: Number, required: true, min: 0, max: 1439 },
+    isha: { type: Number, required: true, min: 0, max: 1439 }
 }, { _id: false });
 
 const officialMeeqatSchema = new mongoose.Schema({
@@ -37,19 +37,27 @@ const officialMeeqatSchema = new mongoose.Schema({
     },
     schoolOfThought: {
         type: String,
-        enum: ['hanafi', 'shafi', 'maliki', 'hanbali'],
-        required: function () {
-            return this.sect === 'sunni';
-        },
+        enum: [
+            // Sunni schools
+            'hanafi', 'shafi', 'maliki', 'hanbali',
+            // Shia schools
+            'jafari', 'ismaili', 'zaydi'
+        ],
+        required: true,
         validate: {
             validator: function (v) {
-                // If Shia, schoolOfThought should be null/undefined
-                if (this.sect === 'shia') return !v;
-                // If Sunni, schoolOfThought is required
-                if (this.sect === 'sunni') return !!v;
-                return true;
+                const sunniSchools = ['hanafi', 'shafi', 'maliki', 'hanbali'];
+                const shiaSchools = ['jafari', 'ismaili', 'zaydi'];
+                
+                if (this.sect === 'sunni') {
+                    return sunniSchools.includes(v);
+                }
+                if (this.sect === 'shia') {
+                    return shiaSchools.includes(v);
+                }
+                return false;
             },
-            message: 'School of thought is required for Sunni sect only'
+            message: 'Invalid school of thought for the selected sect'
         }
     },
     publisher: {
@@ -74,16 +82,8 @@ const officialMeeqatSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// For Sunni entries
 officialMeeqatSchema.index({ locationName: 1, sect: 1, schoolOfThought: 1 }, { 
-    unique: true,
-    partialFilterExpression: { sect: 'sunni' }
-});
-
-// For Shia entries
-officialMeeqatSchema.index({ locationName: 1, sect: 1 }, { 
-    unique: true,
-    partialFilterExpression: { sect: 'shia' }
+    unique: true
 });
 
 module.exports = mongoose.model('OfficialMeeqat', officialMeeqatSchema);

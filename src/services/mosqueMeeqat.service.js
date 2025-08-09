@@ -1,138 +1,16 @@
 const MosqueMeeqat = require('../models/mosqueMeeqat.model');
 const Mosque = require('../models/mosque.model');
-const generateMeeqatHTML = require('../helpers/meeqatHTMLGenerator');
+const { getDateRangeDayNumbers } = require('../helpers/mosqueMeeqat/dateHelpers');
+const { formatTimings } = require('../helpers/mosqueMeeqat/timeFormatHelpers');
+const { generateTimings } = require('../helpers/mosqueMeeqat/meeqatGeneratorHelpers');
+const { buildMosqueMeeqatPipeline } = require('../helpers/mosqueMeeqat/pipelineHelpers');
+const { generateMosqueMeeqatHTML } = require('../helpers/mosqueMeeqat/htmlHelpers');
 
-// Helper function to check mosque access
-const checkMosqueAccess = (mosqueId, role, assignedMosques) => {
-    if (role === 'admin') return true;
-    return assignedMosques.some(id => id.toString() === mosqueId.toString());
-};
-
-// Helper function to add/subtract minutes from time string
-const adjustTime = (timeStr, minutes) => {
-    const [hours, mins] = timeStr.split(':').map(Number);
-    const totalMinutes = hours * 60 + mins + minutes;
-    const newHours = Math.floor(totalMinutes / 60) % 24;
-    const newMins = totalMinutes % 60;
-    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
-};
-
-// Round time based on interval and direction
-const roundTime = (timeStr, interval, direction) => {
-    const [hours, mins] = timeStr.split(':').map(Number);
-    const totalMinutes = hours * 60 + mins;
-
-    let roundedMinutes;
-    if (direction === 'up') {
-        roundedMinutes = Math.ceil(totalMinutes / interval) * interval;
-    } else if (direction === 'down') {
-        roundedMinutes = Math.floor(totalMinutes / interval) * interval;
-    } else { // nearest
-        roundedMinutes = Math.round(totalMinutes / interval) * interval;
-    }
-
-    const newHours = Math.floor(roundedMinutes / 60) % 24;
-    const newMins = roundedMinutes % 60;
-
-    return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
-};
-
-// Convert time string to minutes for comparison
-const timeToMinutes = (timeStr) => {
-    const [hours, mins] = timeStr.split(':').map(Number);
-    return hours * 60 + mins;
-};
-
-// Helper function to apply config rules to generate timings
-const generateTimings = (officialTimings, config) => {
-    // Track previous day's trends for stable days
-    const trendHistory = {
-        fajr: null,
-        dhuhr: null,
-        asr: null,
-        maghrib: null,
-        isha: null
-    };
-
-    return officialTimings.map((day, index) => {
-        const processedDay = {
-            date_csv: day.date_csv,
-            dayNumber: day.dayNumber,
-            sunrise: day.sunrise, // No adjustment
-            zenith: day.zenith,   // No adjustment
-            isManuallyEdited: false
-        };
-
-        const previousDay = index > 0 ? officialTimings[index - 1] : null;
-
-        // Process each prayer time
-        ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].forEach(prayer => {
-            const prayerConfig = config.jamaat[prayer];
-            let jamaatTime;
-
-            // 1. Apply fixed time or delay
-            if (prayerConfig.fixedTime) {
-                jamaatTime = prayerConfig.fixedTime;
-            } else {
-                // Apply delay to official time
-                jamaatTime = adjustTime(day[prayer], prayerConfig.delay || 0);
-
-                // 2. Apply rounding if enabled
-                if (prayerConfig.roundingEnabled && config.roundingInterval) {
-                    let direction;
-
-                    if (previousDay) {
-                        // Calculate previous day's time with same delay
-                        const previousAdjusted = adjustTime(previousDay[prayer], prayerConfig.delay || 0);
-                        const currentMinutes = timeToMinutes(jamaatTime);
-                        const previousMinutes = timeToMinutes(previousAdjusted);
-
-                        if (currentMinutes > previousMinutes) {
-                            // Increasing trend - round down to resist
-                            direction = 'down';
-                            trendHistory[prayer] = 'increasing';
-                        } else if (currentMinutes < previousMinutes) {
-                            // Decreasing trend - round up to resist
-                            direction = 'up';
-                            trendHistory[prayer] = 'decreasing';
-                        } else {
-                            // Stable - use previous trend
-                            if (trendHistory[prayer] === 'increasing') {
-                                direction = 'down';
-                            } else if (trendHistory[prayer] === 'decreasing') {
-                                direction = 'up';
-                            } else {
-                                direction = 'nearest';
-                            }
-                        }
-                    } else {
-                        // First day - round to nearest
-                        direction = 'nearest';
-                    }
-
-                    jamaatTime = roundTime(jamaatTime, config.roundingInterval, direction);
-                }
-            }
-
-            processedDay[prayer] = jamaatTime;
-        });
-
-        // 3. Calculate adhan times
-        processedDay.adhanTimes = {
-            fajr: adjustTime(processedDay.fajr, -(config.jamaat.fajr.adhanGap || 15)),
-            dhuhr: adjustTime(processedDay.dhuhr, -(config.jamaat.dhuhr.adhanGap || 15)),
-            asr: adjustTime(processedDay.asr, -(config.jamaat.asr.adhanGap || 15)),
-            maghrib: adjustTime(processedDay.maghrib, -(config.jamaat.maghrib.adhanGap || 15)),
-            isha: adjustTime(processedDay.isha, -(config.jamaat.isha.adhanGap || 15))
-        };
-
-        return processedDay;
-    });
-};
-
-// Get mosqueMeeqat by mosque ID
-const getMosqueMeeqatByMosqueId = async (mosqueId) => {
+// Get mosque meeqat with filtering and formatting
+const getMosqueMeeqat = async (mosqueId, options = {}) => {
     try {
+        const { startDate, endDate, timeFormat = '12h' } = options;
+
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
@@ -143,53 +21,137 @@ const getMosqueMeeqatByMosqueId = async (mosqueId) => {
             };
         }
 
-        // Find mosqueMeeqat by mosque ID
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
-            .populate('mosque', 'name address locality')
-            .populate('sourceOfficialMeeqat', 'locationName publisher')
-            .populate('generatedBy', 'name email')
-            .populate('approvedBy', 'name email');
+        // Convert dates to day numbers
+        const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
 
-        if (!mosqueMeeqat) {
+        // Use the helper pipeline
+        const pipeline = buildMosqueMeeqatPipeline(mosque._id, startDay, endDay);
+        const result = await MosqueMeeqat.aggregate(pipeline);
+
+        if (!result || result.length === 0) {
             return {
-                status: 'success',
-                message: 'No mosqueMeeqat found for this mosque',
-                mosqueMeeqat: null
+                status: 'failed',
+                code: 404,
+                message: 'No active mosque meeqat found for this mosque'
             };
         }
 
+        const mosqueMeeqat = result[0];
+
+        // Apply time format conversion to filtered timings
+        const formattedTimings = formatTimings(mosqueMeeqat.timings, timeFormat);
+
         return {
             status: 'success',
-            mosqueMeeqat
+            mosqueMeeqat: {
+                _id: mosqueMeeqat._id,
+                mosque: mosqueMeeqat.mosque,
+                sourceOfficialMeeqat: mosqueMeeqat.sourceOfficialMeeqat,
+                version: mosqueMeeqat.version,
+                generatedAt: mosqueMeeqat.generatedAt,
+                generatedBy: mosqueMeeqat.generatedBy,
+                isApproved: mosqueMeeqat.isApproved,
+                approvedBy: mosqueMeeqat.approvedBy,
+                approvedAt: mosqueMeeqat.approvedAt,
+                timings: formattedTimings
+            },
+            dateRange: {
+                startDate: startDate || 'Full year',
+                endDate: endDate || 'Full year',
+                startDayNumber: startDay,
+                endDayNumber: endDay,
+                totalDays: formattedTimings.length
+            },
+            timeFormat
         };
     } catch (error) {
-        console.error('GetMosqueMeeqatByMosqueId error:', error);
+        console.error('GetMosqueMeeqat error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to fetch mosqueMeeqat'
+            message: 'Failed to fetch mosque meeqat'
         };
     }
 };
 
-// Generate new mosqueMeeqat
-const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
+// Generate HTML for download
+const generateMeeqatHTML = async (mosqueId, options = {}) => {
     try {
-        // Check mosque access
-        // Verfiy if duplicate document is not being created @Aarish
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
+        const { startDate, endDate, timeFormat = '12h' } = options;
+
+        // Check if mosque exists
+        const mosque = await Mosque.findById(mosqueId);
+        if (!mosque) {
             return {
                 status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
+                code: 404,
+                message: 'Mosque not found'
             };
         }
 
-        // Get mosque with references
-        const mosque = await Mosque.findById(mosqueId)
-            .populate('officialMeeqat')
-            .populate('meeqatConfig');
+        // Convert dates to day numbers
+        const { startDay, endDay } = getDateRangeDayNumbers(startDate, endDate);
 
+        // Use the same pipeline
+        const pipeline = buildMosqueMeeqatPipeline(mosque._id, startDay, endDay);
+        const result = await MosqueMeeqat.aggregate(pipeline);
+
+        if (!result || result.length === 0) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'No active mosque meeqat found for this mosque'
+            };
+        }
+
+        const mosqueMeeqat = result[0];
+        const formattedTimings = formatTimings(mosqueMeeqat.timings, timeFormat);
+
+        // Prepare data for HTML
+        const mosqueMeeqatForHTML = {
+            ...mosqueMeeqat,
+            timings: formattedTimings
+        };
+
+        const dateRange = {
+            startDate: startDate || 'Full year',
+            endDate: endDate || 'Full year',
+            startDayNumber: startDay,
+            endDayNumber: endDay,
+            totalDays: formattedTimings.length
+        };
+
+        // Generate HTML
+        const html = generateMosqueMeeqatHTML(mosqueMeeqatForHTML, dateRange, timeFormat);
+
+        return {
+            status: 'success',
+            html: html
+        };
+
+    } catch (error) {
+        console.error('GetMosqueMeeqatHTML error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to generate mosque meeqat HTML'
+        };
+    }
+};
+
+// Generate new mosque meeqat
+const generateMosqueMeeqat = async (mosqueId, userId) => {
+    try {
+        // Parallelize initial queries with lean() for better performance
+        const [mosque, existingMeeqat] = await Promise.all([
+            Mosque.findById(mosqueId)
+                .populate('officialMeeqat', 'timings locationName publisher sect schoolOfThought')
+                .populate('meeqatConfig')
+                .lean(), // Use lean for read-only data
+            MosqueMeeqat.findOne({ mosque: mosqueId }).lean()
+        ]);
+
+        // Early validation (fail fast)
         if (!mosque) {
             return {
                 status: 'failed',
@@ -214,11 +176,13 @@ const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => 
             };
         }
 
-        // Deactivate existing active mosqueMeeqat
-        await MosqueMeeqat.updateMany(
-            { mosque: mosqueId, isActive: true },
-            { isActive: false }
-        );
+        if (existingMeeqat) {
+            return {
+                status: 'failed',
+                code: 409,
+                message: 'Active mosque meeqat already exists. Please delete or deactivate the existing one before generating new.'
+            };
+        }
 
         // Generate timings based on config
         const generatedTimings = generateTimings(
@@ -229,7 +193,6 @@ const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => 
         // Create config snapshot
         const configSnapshot = {
             jamaat: mosque.meeqatConfig.jamaat,
-            roundingInterval: mosque.meeqatConfig.roundingInterval,
             jummah: mosque.meeqatConfig.jummah
         };
 
@@ -245,51 +208,57 @@ const generateMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => 
             isActive: true
         });
 
-        await newMosqueMeeqat.save();
+        // Parallelize save operations
+        const [savedMeeqat] = await Promise.all([
+            newMosqueMeeqat.save(),
+            Mosque.findByIdAndUpdate(mosqueId, { mosqueMeeqat: newMosqueMeeqat._id })
+        ]);
 
-        // Update mosque reference
-        mosque.mosqueMeeqat = newMosqueMeeqat._id;
-        await mosque.save();
-
-        // Populate before returning
-        await newMosqueMeeqat.populate('mosque', 'name address locality');
-        await newMosqueMeeqat.populate('sourceOfficialMeeqat', 'locationName publisher sect schoolOfThought');
-        await newMosqueMeeqat.populate('generatedBy', 'name email');
+        // Single populate call with multiple paths (1 database roundtrip)
+        await savedMeeqat.populate([
+            { path: 'mosque', select: 'name address locality' },
+            { path: 'sourceOfficialMeeqat', select: 'locationName publisher sect schoolOfThought' },
+            { path: 'generatedBy', select: 'name email' }
+        ]);
 
         return {
             status: 'success',
-            message: 'MosqueMeeqat generated successfully',
-            mosqueMeeqat: newMosqueMeeqat
+            message: 'Mosque meeqat generated successfully',
+            mosqueMeeqat: {
+                _id: savedMeeqat._id,
+                mosque: savedMeeqat.mosque,
+                sourceOfficialMeeqat: savedMeeqat.sourceOfficialMeeqat,
+                version: savedMeeqat.version,
+                generatedAt: savedMeeqat.generatedAt,
+                generatedBy: savedMeeqat.generatedBy,
+                isApproved: savedMeeqat.isApproved,
+                timingsCount: savedMeeqat.timings.length
+            }
         };
     } catch (error) {
         console.error('GenerateMosqueMeeqat error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to generate mosqueMeeqat'
+            message: 'Failed to generate mosque meeqat'
         };
     }
 };
 
-// Approve mosqueMeeqat
-const approveMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
+// Approve mosque meeqat
+const approveMosqueMeeqat = async (mosqueId, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Find active mosqueMeeqat
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true });
+        const mosqueMeeqat = await MosqueMeeqat.findOne({ 
+            mosque: mosqueId, 
+            isActive: true 
+        });
+
         if (!mosqueMeeqat) {
             return {
                 status: 'failed',
                 code: 404,
-                message: 'No active mosqueMeeqat found for this mosque'
+                message: 'No active mosque meeqat found for this mosque'
             };
         }
 
@@ -297,7 +266,7 @@ const approveMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
             return {
                 status: 'failed',
                 code: 400,
-                message: 'MosqueMeeqat is already approved'
+                message: 'Mosque meeqat is already approved'
             };
         }
 
@@ -313,44 +282,49 @@ const approveMosqueMeeqat = async (mosqueId, userId, role, assignedMosques) => {
 
         return {
             status: 'success',
-            message: 'MosqueMeeqat approved successfully',
-            mosqueMeeqat
+            message: 'Mosque meeqat approved successfully',
+            mosqueMeeqat: {
+                _id: mosqueMeeqat._id,
+                mosque: mosqueMeeqat.mosque,
+                version: mosqueMeeqat.version,
+                isApproved: mosqueMeeqat.isApproved,
+                approvedBy: mosqueMeeqat.approvedBy,
+                approvedAt: mosqueMeeqat.approvedAt
+            }
         };
     } catch (error) {
         console.error('ApproveMosqueMeeqat error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to approve mosqueMeeqat'
+            message: 'Failed to approve mosque meeqat'
         };
     }
 };
 
-// Update mosqueMeeqat by mosque ID
-const updateMosqueMeeqatByMosqueId = async (mosqueId, updateData, userId, role, assignedMosques) => {
+// Update mosque meeqat
+const updateMosqueMeeqat = async (mosqueId, updateData, userId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Find active mosqueMeeqat
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true });
+        const mosqueMeeqat = await MosqueMeeqat.findOne({ 
+            mosque: mosqueId, 
+            isActive: true 
+        });
+
         if (!mosqueMeeqat) {
             return {
                 status: 'failed',
                 code: 404,
-                message: 'No active mosqueMeeqat found for this mosque'
+                message: 'No active mosque meeqat found for this mosque'
             };
         }
 
         // Handle day-specific updates
         if (updateData.dayNumber && updateData.timingUpdate) {
-            const dayIndex = mosqueMeeqat.timings.findIndex(t => t.dayNumber === updateData.dayNumber);
+            const dayIndex = mosqueMeeqat.timings.findIndex(
+                t => t.dayNumber === updateData.dayNumber
+            );
+
             if (dayIndex === -1) {
                 return {
                     status: 'failed',
@@ -359,45 +333,121 @@ const updateMosqueMeeqatByMosqueId = async (mosqueId, updateData, userId, role, 
                 };
             }
 
-            // Update specific day
-            Object.assign(mosqueMeeqat.timings[dayIndex], updateData.timingUpdate);
+            // Validate timing updates (ensure they're in minutes format 0-1439)
+            const validTimeFields = ['fajr', 'sunrise', 'zenith', 'dhuhr', 'asr', 'maghrib', 'isha'];
+            const validAdhanFields = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
+            // Update prayer times
+            validTimeFields.forEach(field => {
+                if (updateData.timingUpdate[field] !== undefined) {
+                    const timeValue = updateData.timingUpdate[field];
+                    if (timeValue < 0 || timeValue > 1439) {
+                        throw new Error(`Invalid ${field} time: must be between 0-1439 minutes`);
+                    }
+                    mosqueMeeqat.timings[dayIndex][field] = timeValue;
+                }
+            });
+
+            // Update adhan times if provided
+            if (updateData.timingUpdate.adhanTimes) {
+                validAdhanFields.forEach(field => {
+                    if (updateData.timingUpdate.adhanTimes[field] !== undefined) {
+                        const timeValue = updateData.timingUpdate.adhanTimes[field];
+                        if (timeValue < 0 || timeValue > 1439) {
+                            throw new Error(`Invalid ${field} adhan time: must be between 0-1439 minutes`);
+                        }
+                        mosqueMeeqat.timings[dayIndex].adhanTimes[field] = timeValue;
+                    }
+                });
+            }
+
+            // Mark as manually edited
             mosqueMeeqat.timings[dayIndex].isManuallyEdited = true;
             mosqueMeeqat.timings[dayIndex].editedBy = userId;
             mosqueMeeqat.timings[dayIndex].editedAt = new Date();
             mosqueMeeqat.timings[dayIndex].editReason = updateData.editReason || 'Manual adjustment';
         }
 
-        // Increment version
+        // Handle bulk updates (multiple days)
+        if (updateData.bulkUpdates && Array.isArray(updateData.bulkUpdates)) {
+            for (const bulkUpdate of updateData.bulkUpdates) {
+                if (!bulkUpdate.dayNumber || !bulkUpdate.timingUpdate) {
+                    continue; // Skip invalid bulk updates
+                }
+
+                const dayIndex = mosqueMeeqat.timings.findIndex(
+                    t => t.dayNumber === bulkUpdate.dayNumber
+                );
+
+                if (dayIndex === -1) {
+                    continue; // Skip invalid day numbers
+                }
+
+                // Apply same validation and updates as single day
+                const validTimeFields = ['fajr', 'sunrise', 'zenith', 'dhuhr', 'asr', 'maghrib', 'isha'];
+                const validAdhanFields = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
+                // Update prayer times
+                validTimeFields.forEach(field => {
+                    if (bulkUpdate.timingUpdate[field] !== undefined) {
+                        const timeValue = bulkUpdate.timingUpdate[field];
+                        if (timeValue >= 0 && timeValue <= 1439) {
+                            mosqueMeeqat.timings[dayIndex][field] = timeValue;
+                        }
+                    }
+                });
+
+                // Update adhan times if provided
+                if (bulkUpdate.timingUpdate.adhanTimes) {
+                    validAdhanFields.forEach(field => {
+                        if (bulkUpdate.timingUpdate.adhanTimes[field] !== undefined) {
+                            const timeValue = bulkUpdate.timingUpdate.adhanTimes[field];
+                            if (timeValue >= 0 && timeValue <= 1439) {
+                                mosqueMeeqat.timings[dayIndex].adhanTimes[field] = timeValue;
+                            }
+                        }
+                    });
+                }
+
+                // Mark as manually edited
+                mosqueMeeqat.timings[dayIndex].isManuallyEdited = true;
+                mosqueMeeqat.timings[dayIndex].editedBy = userId;
+                mosqueMeeqat.timings[dayIndex].editedAt = new Date();
+                mosqueMeeqat.timings[dayIndex].editReason = bulkUpdate.editReason || 'Bulk manual adjustment';
+            }
+        }
+
+        // Increment version and save
         mosqueMeeqat.version += 1;
         await mosqueMeeqat.save();
 
+        // Populate before returning
+        await mosqueMeeqat.populate('mosque', 'name address locality');
+
         return {
             status: 'success',
-            message: 'MosqueMeeqat updated successfully',
-            mosqueMeeqat
+            message: 'Mosque meeqat updated successfully',
+            mosqueMeeqat: {
+                _id: mosqueMeeqat._id,
+                mosque: mosqueMeeqat.mosque,
+                version: mosqueMeeqat.version,
+                updatedAt: mosqueMeeqat.updatedAt,
+                totalTimings: mosqueMeeqat.timings.length
+            }
         };
     } catch (error) {
-        console.error('UpdateMosqueMeeqatByMosqueId error:', error);
+        console.error('UpdateMosqueMeeqat error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to update mosqueMeeqat'
+            message: error.message || 'Failed to update mosque meeqat'
         };
     }
 };
 
-// Delete mosqueMeeqat by mosque ID
-const deleteMosqueMeeqatByMosqueId = async (mosqueId, role, assignedMosques) => {
+// Permanently delete mosque meeqat
+const deleteMosqueMeeqat = async (mosqueId) => {
     try {
-        // Check mosque access
-        if (!checkMosqueAccess(mosqueId, role, assignedMosques)) {
-            return {
-                status: 'failed',
-                code: 403,
-                message: 'You do not have access to this mosque'
-            };
-        }
-
         // Check if mosque exists
         const mosque = await Mosque.findById(mosqueId);
         if (!mosque) {
@@ -409,211 +459,47 @@ const deleteMosqueMeeqatByMosqueId = async (mosqueId, role, assignedMosques) => 
         }
 
         // Find active mosqueMeeqat
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true });
+        const mosqueMeeqat = await MosqueMeeqat.findOne({ 
+            mosque: mosqueId, 
+            isActive: true 
+        });
+
         if (!mosqueMeeqat) {
             return {
                 status: 'failed',
                 code: 404,
-                message: 'No active mosqueMeeqat found for this mosque'
+                message: 'No active mosque meeqat found for this mosque'
             };
         }
 
-        // Remove mosque reference
+        // Remove mosque reference first
         await Mosque.findByIdAndUpdate(
             mosqueId,
             { $unset: { mosqueMeeqat: 1 } }
         );
 
-        // Deactivate instead of delete (to preserve history)
-        // mosqueMeeqat.isActive = false;
-        // await mosqueMeeqat.save();
-
-        // Remove the document from the collection permanently
+        // Permanently delete the document
         await MosqueMeeqat.deleteOne({ _id: mosqueMeeqat._id });
-        
-        return {
-            status: 'success',
-            message: 'MosqueMeeqat deactivated successfully'
-        };
-    } catch (error) {
-        console.error('DeleteMosqueMeeqatByMosqueId error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to delete mosqueMeeqat'
-        };
-    }
-};
-
-const getMosqueMeeqatHTML = async (mosqueId, filters = {}) => {
-    try {
-        // Get mosqueMeeqat with populated references
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
-            .populate('mosque', 'name address locality')
-            .populate('sourceOfficialMeeqat', 'locationName publisher');
-
-        if (!mosqueMeeqat) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'No active mosqueMeeqat found for this mosque'
-            };
-        }
-
-        // Generate HTML
-        const html = generateMeeqatHTML(mosqueMeeqat, filters);
 
         return {
             status: 'success',
-            html
+            message: 'Mosque meeqat deleted permanently'
         };
     } catch (error) {
-        console.error('GetMosqueMeeqatHTML error:', error);
+        console.error('DeleteMosqueMeeqat error:', error);
         return {
             status: 'failed',
             code: 500,
-            message: 'Failed to generate mosqueMeeqat HTML'
-        };
-    }
-};
-
-// Convert date to day number (1-366)
-const dateToDay = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const start = new Date(year, 0, 1); // Jan 1st of that year
-    const dayNumber = Math.floor((date - start) / (24 * 60 * 60 * 1000)) + 1;
-    return dayNumber;
-};
-
-// Validate date string format
-const isValidDate = (dateString) => {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
-};
-
-// Get daily prayers for date range
-const getDailyPrayers = async (mosqueId, startDate, endDate) => {
-    try {
-        // Validate inputs
-        if (!startDate || !endDate) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Both startDate and endDate are required (format: YYYY-MM-DD)'
-            };
-        }
-
-        if (!isValidDate(startDate) || !isValidDate(endDate)) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Invalid date format. Use YYYY-MM-DD'
-            };
-        }
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        if (start > end) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'startDate cannot be later than endDate'
-            };
-        }
-
-        // Check if dates are in same year
-        if (start.getFullYear() !== end.getFullYear()) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Date range cannot span multiple years'
-            };
-        }
-
-        // Check if mosque exists
-        const mosque = await Mosque.findById(mosqueId);
-        if (!mosque) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'Mosque not found'
-            };
-        }
-
-        // Find active mosqueMeeqat
-        const mosqueMeeqat = await MosqueMeeqat.findOne({ mosque: mosqueId, isActive: true })
-            .populate('mosque', 'name address locality')
-            .populate('sourceOfficialMeeqat', 'locationName publisher');
-
-        if (!mosqueMeeqat) {
-            return {
-                status: 'failed',
-                code: 404,
-                message: 'No active mosqueMeeqat found for this mosque'
-            };
-        }
-
-        // Convert dates to day numbers
-        const startDayNumber = dateToDay(startDate);
-        const endDayNumber = dateToDay(endDate);
-
-        // Validate day numbers
-        if (startDayNumber < 1 || startDayNumber > 366 || endDayNumber < 1 || endDayNumber > 366) {
-            return {
-                status: 'failed',
-                code: 400,
-                message: 'Invalid date range'
-            };
-        }
-
-        // Filter timings by day number range
-        const filteredTimings = mosqueMeeqat.timings.filter(timing => 
-            timing.dayNumber >= startDayNumber && timing.dayNumber <= endDayNumber
-        );
-
-        return {
-            status: 'success',
-            mosque: {
-                id: mosqueMeeqat.mosque._id,
-                name: mosqueMeeqat.mosque.name,
-                address: mosqueMeeqat.mosque.address,
-                locality: mosqueMeeqat.mosque.locality
-            },
-            dateRange: {
-                startDate,
-                endDate,
-                startDayNumber,
-                endDayNumber,
-                totalDays: filteredTimings.length
-            },
-            timings: filteredTimings,
-            source: {
-                officialMeeqat: mosqueMeeqat.sourceOfficialMeeqat.locationName,
-                publisher: mosqueMeeqat.sourceOfficialMeeqat.publisher,
-                version: mosqueMeeqat.version,
-                generatedAt: mosqueMeeqat.generatedAt,
-                isApproved: mosqueMeeqat.isApproved
-            }
-        };
-
-    } catch (error) {
-        console.error('GetDailyPrayers error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch daily prayers'
+            message: 'Failed to delete mosque meeqat'
         };
     }
 };
 
 module.exports = {
-    getMosqueMeeqatByMosqueId,
+    getMosqueMeeqat,
+    generateMeeqatHTML,
     generateMosqueMeeqat,
     approveMosqueMeeqat,
-    updateMosqueMeeqatByMosqueId,
-    deleteMosqueMeeqatByMosqueId,
-    getMosqueMeeqatHTML,
-    getDailyPrayers
+    updateMosqueMeeqat,
+    deleteMosqueMeeqat
 };

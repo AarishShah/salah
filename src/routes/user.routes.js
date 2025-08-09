@@ -15,6 +15,7 @@ router
     .put("/profile", userAuth, controller.updateProfile)
     .delete("/account", userAuth, controller.deleteAccount)
     .post("/editor-request", userAuth, controller.createEditorRequest)
+    .post("/editor-additional-request", userAuth, controller.createEditorAdditionalRequest)
     .get("/editor-request/status", userAuth, controller.getEditorRequestStatus)
     .patch("/phone-verification", userAuth, controller.verifyPhoneStatus);
 

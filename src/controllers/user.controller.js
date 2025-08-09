@@ -60,6 +60,41 @@ const createEditorRequest = catchError(async (req, res) => {
     return res.json(result);
 });
 
+const createEditorAdditionalRequest = catchError(async (req, res) => {
+    const { userId } = req.user;
+    const { mosqueIds, reason } = req.body;
+
+    // Validate that user is an editor
+    if (req.user.role !== 'editor') {
+        return res.status(403).json({
+            status: 'failed',
+            message: 'Only editors can request additional mosques'
+        });
+    }
+
+    if (!mosqueIds || !Array.isArray(mosqueIds) || mosqueIds.length === 0) {
+        return res.status(400).json({
+            status: 'failed',
+            message: 'Please select at least one mosque'
+        });
+    }
+
+    if (!reason || !reason.trim()) {
+        return res.status(400).json({
+            status: 'failed',
+            message: 'Please provide a reason for your request'
+        });
+    }
+
+    const result = await userService.createEditorAdditionalRequest(userId, mosqueIds, reason);
+
+    if (result.status === 'failed') {
+        return res.status(result.code || 400).json(result);
+    }
+
+    return res.json(result);
+});
+
 const getEditorRequestStatus = catchError(async (req, res) => {
     const { userId } = req.user;
 
@@ -90,6 +125,7 @@ module.exports = {
     updateProfile,
     deleteAccount,
     createEditorRequest,
+    createEditorAdditionalRequest,
     getEditorRequestStatus,
     verifyPhoneStatus,
 };

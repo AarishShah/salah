@@ -6,27 +6,23 @@ const jamaatConfigSchema = new mongoose.Schema({
         default: 0,
         min: -120,
         max: 120
-    }, // in minutes
+    },
     fixedTime: {
-        type: String,
+        type: Number,
         default: null,
-        validate: {
-            validator: function (v) {
-                if (!v) return true;
-                return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-            },
-            message: 'Fixed time must be in HH:MM format'
-        }
-    }, // HH:MM format
+        min: 0,
+        max: 1439
+    },
     adhanGap: {
         type: Number,
         default: 10,
         min: 0,
         max: 90
-    }, // minutes before jamaat
-    roundingEnabled: {
-        type: Boolean,
-        default: true
+    },
+    roundingInterval: {  // Changed from roundingEnabled boolean
+        type: Number,
+        enum: [0, 5, 10, 15],
+        default: 5
     }
 }, { _id: false });
 
@@ -47,27 +43,19 @@ const meeqatConfigSchema = new mongoose.Schema({
         isha: { type: jamaatConfigSchema, default: () => ({}) }
     },
 
-    // Global rounding interval (5, 10, or 15 minutes)
-    roundingInterval: {
-        type: Number,
-        enum: [5, 10, 15],
-        default: 5
-    },
-
     // Jummah (Friday) salah settings
     jummah: {
-        adhanTime: {
-            type: String,
-            validate: {
-                validator: function (v) {
-                    if (!v) return true;
-                    return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-                },
-                message: 'Time must be in HH:MM format'
-            }
+        // adhanTime: collect this from official meeqat
+        khutbahStartTime: {
+            type: Number,
+            min: 0,
+            max: 1439
         },
-        khutbahStartTime: String,
-        jamaatTime: String
+        jamaatTime: {
+            type: Number,
+            min: 0,
+            max: 1439
+        }
     },
 
     // Metadata

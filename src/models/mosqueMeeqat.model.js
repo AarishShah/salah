@@ -13,22 +13,22 @@ const mosqueDailyTimingSchema = new mongoose.Schema({
         max: 366
     }, // Day of year (1-366)
 
-    // Prayer times after mosque-specific adjustments
-    fajr: { type: String, required: true }, // HH:MM
-    sunrise: { type: String, required: true }, // No adjustment, copied from base
-    zenith: { type: String, required: true },
-    dhuhr: { type: String, required: true },
-    asr: { type: String, required: true },
-    maghrib: { type: String, required: true },
-    isha: { type: String, required: true },
+    // Prayer times after mosque-specific adjustments (minutes from midnight)
+    fajr: { type: Number, required: true, min: 0, max: 1439 },
+    sunrise: { type: Number, required: true, min: 0, max: 1439 }, // No adjustment, copied from base
+    zenith: { type: Number, required: true, min: 0, max: 1439 },
+    dhuhr: { type: Number, required: true, min: 0, max: 1439 },
+    asr: { type: Number, required: true, min: 0, max: 1439 },
+    maghrib: { type: Number, required: true, min: 0, max: 1439 },
+    isha: { type: Number, required: true, min: 0, max: 1439 },
 
-    // Adhan times
+    // Adhan times (minutes from midnight)
     adhanTimes: {
-        fajr: { type: String, required: true },
-        dhuhr: { type: String, required: true },
-        asr: { type: String, required: true },
-        maghrib: { type: String, required: true },
-        isha: { type: String, required: true }
+        fajr: { type: Number, required: true, min: 0, max: 1439 },
+        dhuhr: { type: Number, required: true, min: 0, max: 1439 },
+        asr: { type: Number, required: true, min: 0, max: 1439 },
+        maghrib: { type: Number, required: true, min: 0, max: 1439 },
+        isha: { type: Number, required: true, min: 0, max: 1439 }
     },
 
     // Track manual edits
@@ -36,6 +36,32 @@ const mosqueDailyTimingSchema = new mongoose.Schema({
     editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     editedAt: Date,
     editReason: String
+}, { _id: false });
+
+const jamaatConfigSnapshotSchema = new mongoose.Schema({
+    delay: {
+        type: Number,
+        default: 0,
+        min: -120,
+        max: 120
+    },
+    fixedTime: {
+        type: Number,
+        default: null,
+        min: 0,
+        max: 1439
+    },
+    adhanGap: {
+        type: Number,
+        default: 10,
+        min: 0,
+        max: 90
+    },
+    roundingInterval: {
+        type: Number,
+        enum: [0, 5, 10, 15],
+        default: 5
+    }
 }, { _id: false });
 
 const mosqueMeeqatSchema = new mongoose.Schema({
@@ -56,17 +82,28 @@ const mosqueMeeqatSchema = new mongoose.Schema({
     // Configuration snapshot used for generation
     configSnapshot: {
         jamaat: {
-            fajr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
-            dhuhr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
-            asr: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
-            maghrib: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean },
-            isha: { delay: Number, fixedTime: String, adhanGap: Number, roundingEnabled: Boolean }
+            fajr: { type: jamaatConfigSnapshotSchema, default: () => ({}) },
+            dhuhr: { type: jamaatConfigSnapshotSchema, default: () => ({}) },
+            asr: { type: jamaatConfigSnapshotSchema, default: () => ({}) },
+            maghrib: { type: jamaatConfigSnapshotSchema, default: () => ({}) },
+            isha: { type: jamaatConfigSnapshotSchema, default: () => ({}) }
         },
-        roundingInterval: Number,
         jummah: {
-            adhanTime: String,
-            khutbahStartTime: String,
-            jamaatTime: String
+            adhanTime: {
+                type: Number,
+                min: 0,
+                max: 1439
+            },
+            khutbahStartTime: {
+                type: Number,
+                min: 0,
+                max: 1439
+            },
+            jamaatTime: {
+                type: Number,
+                min: 0,
+                max: 1439
+            }
         }
     },
 

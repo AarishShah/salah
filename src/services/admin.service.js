@@ -1,6 +1,6 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
-const MosqueTimingConfig = require('../models/mosqueTimingConfig.model');
+const Mosque = require('../models/mosque.model');
 
 // Admin Services
 const getAllUsers = async (filters) => {
@@ -63,7 +63,7 @@ const getUserStats = async () => {
                         {
                             $group: {
                                 _id: null, // Don't group, aggregate all users
-                                total: { $sum: 1 }, // TODO: This count is incorrect as it counts admin twice, once as user and once as admin
+                                total: { $sum: 1 },
                                 active: {
                                     $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] }
                                 },
@@ -289,6 +289,12 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
             user.role = 'editor';
             user.assignedMosques = request.requestedMosques;
             await user.save();
+
+            // ADDED: Update contact person in each assigned mosque
+            await Mosque.updateMany(
+                { _id: { $in: request.requestedMosques } },
+                { $set: { contactPerson: user._id } }
+            );
 
             // Update request
             request.status = 'approved';
