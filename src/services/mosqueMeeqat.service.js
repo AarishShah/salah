@@ -142,11 +142,16 @@ const generateMeeqatHTML = async (mosqueId, options = {}) => {
 // Generate new mosque meeqat
 const generateMosqueMeeqat = async (mosqueId, userId) => {
     try {
-        // Get mosque with references
-        const mosque = await Mosque.findById(mosqueId)
-            .populate('officialMeeqat')
-            .populate('meeqatConfig');
+        // Parallelize initial queries with lean() for better performance
+        const [mosque, existingMeeqat] = await Promise.all([
+            Mosque.findById(mosqueId)
+                .populate('officialMeeqat', 'timings locationName publisher sect schoolOfThought')
+                .populate('meeqatConfig')
+                .lean(), // Use lean for read-only data
+            MosqueMeeqat.findOne({ mosque: mosqueId }).lean()
+        ]);
 
+        // Early validation (fail fast)
         if (!mosque) {
             return {
                 status: 'failed',
@@ -170,12 +175,6 @@ const generateMosqueMeeqat = async (mosqueId, userId) => {
                 message: 'No meeqat config found for this mosque'
             };
         }
-
-        // Check if active mosqueMeeqat already exists
-        const existingMeeqat = await MosqueMeeqat.findOne({ 
-            mosque: mosqueId, 
-            isActive: true 
-        });
 
         if (existingMeeqat) {
             return {
@@ -209,29 +208,31 @@ const generateMosqueMeeqat = async (mosqueId, userId) => {
             isActive: true
         });
 
-        await newMosqueMeeqat.save();
+        // Parallelize save operations
+        const [savedMeeqat] = await Promise.all([
+            newMosqueMeeqat.save(),
+            Mosque.findByIdAndUpdate(mosqueId, { mosqueMeeqat: newMosqueMeeqat._id })
+        ]);
 
-        // Update mosque reference
-        mosque.mosqueMeeqat = newMosqueMeeqat._id;
-        await mosque.save();
-
-        // Populate before returning
-        await newMosqueMeeqat.populate('mosque', 'name address locality');
-        await newMosqueMeeqat.populate('sourceOfficialMeeqat', 'locationName publisher sect schoolOfThought');
-        await newMosqueMeeqat.populate('generatedBy', 'name email');
+        // Single populate call with multiple paths (1 database roundtrip)
+        await savedMeeqat.populate([
+            { path: 'mosque', select: 'name address locality' },
+            { path: 'sourceOfficialMeeqat', select: 'locationName publisher sect schoolOfThought' },
+            { path: 'generatedBy', select: 'name email' }
+        ]);
 
         return {
             status: 'success',
             message: 'Mosque meeqat generated successfully',
             mosqueMeeqat: {
-                _id: newMosqueMeeqat._id,
-                mosque: newMosqueMeeqat.mosque,
-                sourceOfficialMeeqat: newMosqueMeeqat.sourceOfficialMeeqat,
-                version: newMosqueMeeqat.version,
-                generatedAt: newMosqueMeeqat.generatedAt,
-                generatedBy: newMosqueMeeqat.generatedBy,
-                isApproved: newMosqueMeeqat.isApproved,
-                timingsCount: newMosqueMeeqat.timings.length
+                _id: savedMeeqat._id,
+                mosque: savedMeeqat.mosque,
+                sourceOfficialMeeqat: savedMeeqat.sourceOfficialMeeqat,
+                version: savedMeeqat.version,
+                generatedAt: savedMeeqat.generatedAt,
+                generatedBy: savedMeeqat.generatedBy,
+                isApproved: savedMeeqat.isApproved,
+                timingsCount: savedMeeqat.timings.length
             }
         };
     } catch (error) {

@@ -7,18 +7,23 @@ const applySmartRounding = (adjustedTime, intervalSize, intervalTracker) => {
 
     // First day - establish initial target
     if (intervalTracker.currentTarget === null) {
-        intervalTracker.currentTarget = Math.round(adjustedTime / intervalSize) * intervalSize;
+        const timeOverInterval = adjustedTime / intervalSize;
+        intervalTracker.currentTarget = Math.round(timeOverInterval) * intervalSize;
         return intervalTracker.currentTarget;
     }
 
+    // Cache division results (avoid repeated calculations)
+    const timeOverInterval = adjustedTime / intervalSize;
+    const targetOverInterval = intervalTracker.currentTarget / intervalSize;
+
     // Calculate current zone and target zone
-    const currentZone = Math.floor(adjustedTime / intervalSize) * intervalSize;
-    const targetZone = Math.floor(intervalTracker.currentTarget / intervalSize) * intervalSize;
+    const currentZone = Math.floor(timeOverInterval) * intervalSize;
+    const targetZone = Math.floor(targetOverInterval) * intervalSize;
 
     // Check if crossed to new interval zone
     if (currentZone !== targetZone) {
         // Crossed boundary - establish new target
-        intervalTracker.currentTarget = Math.round(adjustedTime / intervalSize) * intervalSize;
+        intervalTracker.currentTarget = Math.round(timeOverInterval) * intervalSize;
     }
 
     // Return current target (maintains stability)
