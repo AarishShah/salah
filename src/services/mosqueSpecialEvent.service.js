@@ -327,8 +327,8 @@ const deleteEvent = async (mosqueId, year, eventId, userId) => {
             };
         }
 
-        // Remove event from array
-        event.remove();
+        // Remove event from array using pull
+        document.events.pull(eventId); // The pull() method is the proper way to remove subdocuments from an array in modern Mongoose versions.
         document.lastModifiedBy = userId;
         document.lastModifiedAt = new Date();
 
