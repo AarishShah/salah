@@ -42,12 +42,7 @@ const specialEventSchema = new mongoose.Schema({
     },
     
     // Additional notes or instructions for this specific event
-    notes: String,
-    
-    isActive: {
-        type: Boolean,
-        default: true
-    }
+    notes: String
 }, { _id: true }); // Keep _id for individual event tracking
 
 const mosqueSpecialEventSchema = new mongoose.Schema({
@@ -95,19 +90,14 @@ const mosqueSpecialEventSchema = new mongoose.Schema({
         ref: 'User'
     },
     
-    lastModifiedAt: Date,
-    
-    isActive: {
-        type: Boolean,
-        default: true
-    }
+    lastModifiedAt: Date
 }, {
     timestamps: true
 });
 
 // Indexes
 mosqueSpecialEventSchema.index({ mosque: 1, year: 1 }, { unique: true }); // One document per mosque per year
-mosqueSpecialEventSchema.index({ mosque: 1, isActive: 1, year: -1 });
+mosqueSpecialEventSchema.index({ mosque: 1, year: -1 });
 mosqueSpecialEventSchema.index({ 'events.date': 1 });
 mosqueSpecialEventSchema.index({ 'events.eventType': 1 });
 

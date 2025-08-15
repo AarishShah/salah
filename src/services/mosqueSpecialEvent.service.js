@@ -5,8 +5,7 @@ const Mosque = require('../models/mosque.model');
 const getMosqueSpecialEvents = async (mosqueId) => {
     try {
         const documents = await MosqueSpecialEvent.find({
-            mosque: mosqueId,
-            isActive: true
+            mosque: mosqueId
         })
         .sort({ year: -1 })
         .populate('createdBy', 'name email')
@@ -31,8 +30,7 @@ const getMosqueSpecialEventsByYear = async (mosqueId, year) => {
     try {
         const document = await MosqueSpecialEvent.findOne({
             mosque: mosqueId,
-            year: year,
-            isActive: true
+            year: year
         })
         .populate('createdBy', 'name email')
         .populate('lastModifiedBy', 'name email');
@@ -65,13 +63,13 @@ const getAllSpecialEvents = async (page, limit) => {
         const skip = (page - 1) * limit;
 
         const [documents, total] = await Promise.all([
-            MosqueSpecialEvent.find({ isActive: true })
+            MosqueSpecialEvent.find({})
                 .populate('mosque', 'name locality')
                 .populate('createdBy', 'name email')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
-            MosqueSpecialEvent.countDocuments({ isActive: true })
+            MosqueSpecialEvent.countDocuments({})
         ]);
 
         return {
@@ -123,15 +121,13 @@ const createYearDocument = async (mosqueId, year, userId) => {
 
         // Check 3 document limit
         const documentCount = await MosqueSpecialEvent.countDocuments({
-            mosque: mosqueId,
-            isActive: true
+            mosque: mosqueId
         });
 
         if (documentCount >= 3) {
             // Find and delete the oldest document
             const oldestDoc = await MosqueSpecialEvent.findOne({
-                mosque: mosqueId,
-                isActive: true
+                mosque: mosqueId
             }).sort({ year: 1 });
 
             if (oldestDoc) {
@@ -157,17 +153,6 @@ const createYearDocument = async (mosqueId, year, userId) => {
         };
     } catch (error) {
         console.error('CreateYearDocument error:', error);
-
-        // Check for validation error
-        if (error.name === 'ValidationError') {
-            return {
-                status: 'failed',
-                code: 400,
-                // Extract first mongoose validation message
-                message: Object.values(error.errors).map(err => err.message).join(', ')
-            };
-        }
-
         return {
             status: 'failed',
             code: 500,
@@ -181,8 +166,7 @@ const addEvent = async (mosqueId, year, eventData, userId) => {
     try {
         const document = await MosqueSpecialEvent.findOne({
             mosque: mosqueId,
-            year: year,
-            isActive: true
+            year: year
         });
 
         if (!document) {
@@ -247,8 +231,7 @@ const updateEvent = async (mosqueId, year, eventId, updateData, userId) => {
     try {
         const document = await MosqueSpecialEvent.findOne({
             mosque: mosqueId,
-            year: year,
-            isActive: true
+            year: year
         });
 
         if (!document) {
@@ -305,8 +288,7 @@ const deleteEvent = async (mosqueId, year, eventId, userId) => {
     try {
         const document = await MosqueSpecialEvent.findOne({
             mosque: mosqueId,
-            year: year,
-            isActive: true
+            year: year
         });
 
         if (!document) {
