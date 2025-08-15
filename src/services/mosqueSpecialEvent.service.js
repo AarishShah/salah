@@ -157,6 +157,17 @@ const createYearDocument = async (mosqueId, year, userId) => {
         };
     } catch (error) {
         console.error('CreateYearDocument error:', error);
+
+        // Check for validation error
+        if (error.name === 'ValidationError') {
+            return {
+                status: 'failed',
+                code: 400,
+                // Extract first mongoose validation message
+                message: Object.values(error.errors).map(err => err.message).join(', ')
+            };
+        }
+
         return {
             status: 'failed',
             code: 500,
