@@ -77,6 +77,8 @@ const mosqueSchema = new mongoose.Schema({
         ref: 'MosqueMeeqat',
         default: null
     },
+    // include mosqueSpecialEventSchema Refrence (CREATE route needs to be update) (only current year should be refrenced)
+    // include mosqueScheduleSchema Refrence
     isActive: {
         type: Boolean,
         default: false
