@@ -1,54 +1,117 @@
-// mosqueSchedule.model.js
 const mongoose = require('mongoose');
 
-const salahTimeSchema = new mongoose.Schema({
-    adhan: { type: Date, required: true },
-    jamaat: { type: Date, required: true }
+// Schema for special event timings within a day
+const dailySpecialEventSchema = new mongoose.Schema({
+    eventType: {
+        type: String,
+        enum: ['eid-al-fitr', 'eid-al-adha', 'shab-e-qadr', 'shab-e-barat', 'shab-e-miraj', 'laylat-al-qadr', 'custom'],
+        required: true
+    },
+    customEventName: String,
+    timings: [{
+        eventName: String,
+        time: Date
+    }],
+    notes: String
 }, { _id: false });
 
+// Schema for each day's schedule
 const dailyScheduleSchema = new mongoose.Schema({
     date: {
         type: Date,
         required: true
     },
 
-    dayOfWeek: {
-        type: String,
-        enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    dayNumber: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 366
+    },
+
+    // Fajr times
+    fajr: {
+        startTime: { type: Date, required: true },
+        adhanTime: { type: Date, required: true },
+        jamaatTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // sunrise start
+    },
+
+    // Sunrise times
+    sunrise: {
+        startTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // sunrise + 20 min
+    },
+
+    // Zenith times
+    zenith: {
+        startTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // zenith + 10 min
+    },
+
+    // Dhuhr times (always present, even on Fridays)
+    dhuhr: {
+        startTime: { type: Date, required: true },
+        adhanTime: Date, // null on Fridays
+        jamaatTime: Date, // null on Fridays
+        endTime: { type: Date, required: true } // asr start
+    },
+
+    // Jummah times (only on Fridays)
+    jummah: {
+        adhanTime: Date, // same as dhuhr start on Fridays
+        khutbahStartTime: Date,
+        jamaatTime: Date
+    },
+
+    // Asr times
+    asr: {
+        startTime: { type: Date, required: true },
+        adhanTime: { type: Date, required: true },
+        jamaatTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // 20 min before maghrib
+    },
+
+    // Sunset times
+    sunset: {
+        startTime: { type: Date, required: true }, // 20 min before maghrib
+        endTime: { type: Date, required: true } // maghrib start
+    },
+
+    // Maghrib times
+    maghrib: {
+        startTime: { type: Date, required: true },
+        adhanTime: { type: Date, required: true },
+        jamaatTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // isha start
+    },
+
+    // Isha times
+    isha: {
+        startTime: { type: Date, required: true },
+        adhanTime: { type: Date, required: true },
+        jamaatTime: { type: Date, required: true },
+        endTime: { type: Date, required: true } // next day fajr
+    },
+
+    // Midnight calculation
+    midnight: {
+        type: Date,
         required: true
     },
 
-    // Prayer times in ISO format
-    prayers: {
-        fajr: salahTimeSchema,
-        sunrise: { type: Date, required: true },
-        dhuhr: salahTimeSchema,
-        asr: salahTimeSchema,
-        maghrib: salahTimeSchema,
-        isha: salahTimeSchema
-    },
+    // Special events for this day (if any)
+    specialEvents: [dailySpecialEventSchema],
 
-    // Special handling for Jummah
-    isJummah: { type: Boolean, default: false },
-    jummah: {
-        adhan: Date,
-        khutbahStart: Date,
-        jamaat: Date
-    },
-
-    // Track source for this day
-    sourceDayNumber: { type: Number, min: 1, max: 366 },
-
-    // Track manual edits
-    isManuallyEdited: { type: Boolean, default: false },
-    editHistory: [{
-        editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        editedAt: Date,
-        editReason: String,
-        previousData: mongoose.Schema.Types.Mixed
-    }]
+    // Day type indicator
+    dayType: {
+        type: String,
+        enum: ['regular', 'friday', 'special'],
+        default: 'regular'
+    }
 }, { _id: false });
 
+// Main Mosque Schedule Schema
 const mosqueScheduleSchema = new mongoose.Schema({
     mosque: {
         type: mongoose.Schema.Types.ObjectId,
@@ -62,26 +125,39 @@ const mosqueScheduleSchema = new mongoose.Schema({
         validate: {
             validator: function (v) {
                 const currentYear = new Date().getFullYear();
-                return v >= currentYear && v <= currentYear + 5;
+                return v >= currentYear && v <= currentYear + 2;
             },
-            message: 'Year must be between current year and 5 years in future'
+            message: 'Year must be between current year and 2 years in future'
         }
     },
 
-    // Source mosqueMeeqat
+    // Source references
     sourceMosqueMeeqat: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'MosqueMeeqat',
         required: true
     },
 
-    // Store mosqueMeeqat version for tracking
-    sourceMeeqatVersion: {
-        type: Number,
+    sourceOfficialMeeqat: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'OfficialMeeqat',
         required: true
     },
 
-    // Generation tracking
+    // 365/366 days of schedule
+    schedule: {
+        type: [dailyScheduleSchema],
+        validate: {
+            validator: function (arr) {
+                const isLeapYear = (this.year % 4 === 0 && this.year % 100 !== 0) || (this.year % 400 === 0);
+                const expectedDays = isLeapYear ? 366 : 365;
+                return arr.length === expectedDays;
+            },
+            message: 'Schedule array must match the number of days in the year'
+        }
+    },
+
+    // Generation metadata
     generationType: {
         type: String,
         enum: ['manual', 'automatic'],
@@ -99,45 +175,16 @@ const mosqueScheduleSchema = new mongoose.Schema({
     generatedAt: {
         type: Date,
         default: Date.now
-    },
-
-    // 365 or 366 days of schedules
-    schedules: {
-        type: [dailyScheduleSchema],
-        validate: [
-            function (arr) {
-                const isLeapYear = this.year % 4 === 0 && (this.year % 100 !== 0 || this.year % 400 === 0);
-                const expectedDays = isLeapYear ? 366 : 365;
-                return arr.length === expectedDays;
-            },
-            'Schedules array must match year length (365 or 366 days)'
-        ]
-    },
-
-    // Active status
-    isActive: {
-        type: Boolean,
-        default: true
     }
 }, {
     timestamps: true
 });
 
-// Compound indexes for efficient queries
+// Indexes
 mosqueScheduleSchema.index({ mosque: 1, year: 1 }, { unique: true });
-mosqueScheduleSchema.index({ mosque: 1, isActive: 1, year: -1 });
-mosqueScheduleSchema.index({ 'schedules.date': 1 }); // For date range queries
-
-// Virtual for checking if schedule is current
-mosqueScheduleSchema.virtual('isCurrent').get(function () {
-    const currentYear = new Date().getFullYear();
-    return this.year === currentYear;
-});
-
-// Virtual for checking if schedule is for future
-mosqueScheduleSchema.virtual('isFuture').get(function () {
-    const currentYear = new Date().getFullYear();
-    return this.year > currentYear;
-});
+mosqueScheduleSchema.index({ mosque: 1, year: -1 });
+mosqueScheduleSchema.index({ 'schedule.date': 1 });
+mosqueScheduleSchema.index({ 'schedule.dayType': 1 });
+mosqueScheduleSchema.index({ 'schedule.specialEvents.eventType': 1 });
 
 module.exports = mongoose.model('MosqueSchedule', mosqueScheduleSchema);
