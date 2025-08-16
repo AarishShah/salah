@@ -105,6 +105,16 @@ const createYearDocument = async (mosqueId, year, userId) => {
             };
         }
 
+        // Validate year before any operations
+        const currentYear = new Date().getFullYear();
+        if (year < currentYear || year > currentYear + 2) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Year must be between current year and 2 years in future'
+            };
+        }
+
         // Check if document already exists for this year
         const existingDoc = await MosqueSpecialEvent.findOne({
             mosque: mosqueId,
@@ -153,6 +163,17 @@ const createYearDocument = async (mosqueId, year, userId) => {
         };
     } catch (error) {
         console.error('CreateYearDocument error:', error);
+
+        // Check for validation error
+        if (error.name === 'ValidationError') {
+            return {
+                status: 'failed',
+                code: 400,
+                // Extract first mongoose validation message
+                message: Object.values(error.errors).map(err => err.message).join(', ')
+            };
+        }
+
         return {
             status: 'failed',
             code: 500,
