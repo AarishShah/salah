@@ -1,4 +1,4 @@
-const { convertMinutesToDate, getDateFromDayNumber, getDayOfYear } = require('./dateTimeHelpers');
+const { convertMinutesToDate, getDateFromDayNumber } = require('./dateTimeHelpers');
 
 // Helper function to build year schedule
 const buildYearSchedule = async (mosque, mosqueMeeqat, specialEvents, year, userId) => {
@@ -117,4 +117,31 @@ const buildYearSchedule = async (mosque, mosqueMeeqat, specialEvents, year, user
         const nextDayIndex = (i + 1) % schedule.length;
         const nextDay = schedule[nextDayIndex];
         
-        // For Dec 31, use
+        // For Dec 31, use Jan 1 from same year's official meeqat
+        const nextFajrTime = nextDay ? nextDay.fajr.startTime : 
+            convertMinutesToDate(officialMeeqat.timings[0].fajr, new Date(year + 1, 0, 1));
+        
+        currentDay.isha.endTime = nextFajrTime;
+        
+                // Calculate midnight
+        const ishaMinutes = currentDay.isha.startTime.getHours() * 60 + currentDay.isha.startTime.getMinutes();
+        const fajrMinutes = nextFajrTime.getHours() * 60 + nextFajrTime.getMinutes();
+        const midnightMinutes = (ishaMinutes + fajrMinutes + (fajrMinutes < ishaMinutes ? 1440 : 0)) / 2;
+        
+        currentDay.midnight = convertMinutesToDate(midnightMinutes, currentDay.date);
+    }
+
+    return {
+        mosque: mosque._id,
+        year: year,
+        sourceMosqueMeeqat: mosqueMeeqat._id,
+        sourceOfficialMeeqat: officialMeeqat._id,
+        schedule: schedule,
+        generatedBy: userId,
+        generationType: 'manual'
+    };
+};
+
+module.exports = {
+    buildYearSchedule
+};
