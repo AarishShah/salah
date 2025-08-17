@@ -5,13 +5,11 @@ const catchError = require("../utils/catchError");
 const getScheduleByDateRange = catchError(async (req, res) => {
     const { mosqueId } = req.params;
     const { startDate, endDate } = req.query;
-    const { userId } = req.user;
 
     const result = await mosqueScheduleService.getScheduleByDateRange(
         mosqueId,
         startDate,
-        endDate,
-        userId
+        endDate
     );
 
     if (result.status === 'failed') {
