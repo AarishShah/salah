@@ -1,6 +1,6 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
-const Mosque = require('../models/mosque.model'); 
+const Mosque = require('../models/mosque.model');
 
 // User Services
 const getProfile = async (userId) => {
@@ -36,6 +36,9 @@ const updateProfile = async (userId, updates) => {
         // Only allow specific fields to be updated
         const allowedUpdates = ['name', 'phone', 'language'];
         const filteredUpdates = {};
+
+        //If the user tries to update phone, phoneVerified status should be set to false
+
 
         Object.keys(updates).forEach(key => {
             if (allowedUpdates.includes(key)) {
