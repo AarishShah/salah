@@ -7,17 +7,18 @@
 const getDateRange = (startDate, endDate) => {
     const currentYear = new Date().getFullYear();
     
-    // Default date range to current year if not provided
-    if (!startDate || !endDate) {
-        return {
-            startDate: new Date(`${currentYear}-01-01`),
-            endDate: new Date(`${currentYear}-12-31`)
-        };
+    // Check each date individually and apply defaults if needed
+    let start = startDate ? new Date(startDate) : new Date(`${currentYear}-01-01`);
+    let end = endDate ? new Date(endDate) : new Date(`${currentYear}-12-31`);
+    
+    // Ensure start is not greater than end
+    if (start > end) {
+        [start, end] = [end, start];
     }
     
     return {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate)
+        startDate: start,
+        endDate: end
     };
 };
 
