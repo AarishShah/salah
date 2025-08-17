@@ -50,7 +50,7 @@ const mosqueSchema = new mongoose.Schema({
             validator: function (v) {
                 const sunniSchools = ['hanafi', 'shafi', 'maliki', 'hanbali'];
                 const shiaSchools = ['jafari', 'ismaili', 'zaydi'];
-                
+
                 if (this.sect === 'sunni') {
                     return sunniSchools.includes(v);
                 }
@@ -62,23 +62,15 @@ const mosqueSchema = new mongoose.Schema({
             message: 'Invalid school of thought for the selected sect'
         }
     },
-    officialMeeqat: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'OfficialMeeqat',
-        default: null
-    },
-    meeqatConfig: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'MeeqatConfig',
-        default: null
-    },
-    mosqueMeeqat: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'MosqueMeeqat',
-        default: null
-    },
-    // include mosqueSpecialEventSchema Refrence (CREATE route needs to be update) (only current year should be refrenced)
-    // include mosqueScheduleSchema Refrence
+
+    // references
+    officialMeeqat: { type: mongoose.Schema.Types.ObjectId, ref: 'OfficialMeeqat', default: null },
+    meeqatConfig: { type: mongoose.Schema.Types.ObjectId, ref: 'MeeqatConfig', default: null },
+    mosqueMeeqat: { type: mongoose.Schema.Types.ObjectId, ref: 'MosqueMeeqat', default: null },
+    mosqueSpecialEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MosqueSpecialEvent', default: null }],
+    mosqueSchedule: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MosqueSchedule', default: null }],
+
+    // Tracking
     isActive: {
         type: Boolean,
         default: false
