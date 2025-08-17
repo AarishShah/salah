@@ -7,9 +7,9 @@ const getMosqueSpecialEvents = async (mosqueId) => {
         const documents = await MosqueSpecialEvent.find({
             mosque: mosqueId
         })
-        .sort({ year: -1 })
-        .populate('createdBy', 'name email')
-        .populate('lastModifiedBy', 'name email');
+            .sort({ year: -1 })
+            .populate('createdBy', 'name email')
+            .populate('lastModifiedBy', 'name email');
 
         return {
             status: 'success',
@@ -32,8 +32,8 @@ const getMosqueSpecialEventsByYear = async (mosqueId, year) => {
             mosque: mosqueId,
             year: year
         })
-        .populate('createdBy', 'name email')
-        .populate('lastModifiedBy', 'name email');
+            .populate('createdBy', 'name email')
+            .populate('lastModifiedBy', 'name email');
 
         if (!document) {
             return {
@@ -141,6 +141,8 @@ const createYearDocument = async (mosqueId, year, userId) => {
             }).sort({ year: 1 });
 
             if (oldestDoc) {
+                // Remove reference from mosque
+                await Mosque.findByIdAndUpdate(mosqueId, { $pull: { mosqueSpecialEvents: oldestDoc._id } });
                 await MosqueSpecialEvent.findByIdAndDelete(oldestDoc._id);
             }
         }
@@ -152,6 +154,9 @@ const createYearDocument = async (mosqueId, year, userId) => {
             events: [],
             createdBy: userId
         });
+
+        // Update Mosque to include the new special event reference
+        await Mosque.findByIdAndUpdate(mosqueId, { $addToSet: { mosqueSpecialEvents: newDocument._id } });
 
         const populatedDoc = await MosqueSpecialEvent.findById(newDocument._id)
             .populate('createdBy', 'name email');
