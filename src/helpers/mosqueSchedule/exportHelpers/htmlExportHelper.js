@@ -1,4 +1,4 @@
-const { formatTime } = require('./dateTimeHelpers');
+const { formatTime } = require('../dateTimeHelpers');
 
 // Generate HTML content
 const generateHTML = async (schedule, mosque) => {

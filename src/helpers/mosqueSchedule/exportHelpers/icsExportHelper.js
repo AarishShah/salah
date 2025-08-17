@@ -1,4 +1,4 @@
-const { formatICSDate } = require('./dateTimeHelpers');
+const { formatICSDate } = require('../dateTimeHelpers');
 
 // Generate ICS content
 const generateICS = async (schedule, mosque) => {

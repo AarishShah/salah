@@ -1,4 +1,4 @@
-const { formatTime } = require('./dateTimeHelpers');
+const { formatTime } = require('../dateTimeHelpers');
 
 // Generate CSV content
 const generateCSV = async (schedule, mosque) => {

@@ -7,9 +7,9 @@ const MosqueSpecialEvent = require('../models/mosqueSpecialEvent.model');
 // Import helpers
 const { getDayOfYear } = require('../helpers/mosqueSchedule/dateTimeHelpers');
 const { buildYearSchedule } = require('../helpers/mosqueSchedule/scheduleBuilderHelpers');
-const generateCSV = require('../helpers/mosqueSchedule/csvExportHelper');
-const generateICS = require('../helpers/mosqueSchedule/icsExportHelper');
-const generateHTML = require('../helpers/mosqueSchedule/htmlExportHelper');
+const generateCSV = require('../helpers/mosqueSchedule/exportHelpers/csvExportHelper');
+const generateICS = require('../helpers/mosqueSchedule/exportHelpers/icsExportHelper');
+const generateHTML = require('../helpers/mosqueSchedule/exportHelpers/htmlExportHelper');
 
 // Get schedule with date range filtering
 const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
