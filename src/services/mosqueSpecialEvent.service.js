@@ -1,6 +1,41 @@
 const MosqueSpecialEvent = require('../models/mosqueSpecialEvent.model');
 const Mosque = require('../models/mosque.model');
 
+// Admin: Get all special events
+const getAllSpecialEvents = async (page, limit) => {
+    try {
+        const skip = (page - 1) * limit;
+
+        const [documents, total] = await Promise.all([
+            MosqueSpecialEvent.find({})
+                .populate('mosque', 'name locality')
+                .populate('createdBy', 'name email')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            MosqueSpecialEvent.countDocuments({})
+        ]);
+
+        return {
+            status: 'success',
+            documents: documents,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit)
+            }
+        };
+    } catch (error) {
+        console.error('GetAllSpecialEvents error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch all special events'
+        };
+    }
+};
+
 // Get all year documents for a mosque
 const getMosqueSpecialEvents = async (mosqueId) => {
     try {
@@ -53,41 +88,6 @@ const getMosqueSpecialEventsByYear = async (mosqueId, year) => {
             status: 'failed',
             code: 500,
             message: 'Failed to fetch special events'
-        };
-    }
-};
-
-// Admin: Get all special events
-const getAllSpecialEvents = async (page, limit) => {
-    try {
-        const skip = (page - 1) * limit;
-
-        const [documents, total] = await Promise.all([
-            MosqueSpecialEvent.find({})
-                .populate('mosque', 'name locality')
-                .populate('createdBy', 'name email')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            MosqueSpecialEvent.countDocuments({})
-        ]);
-
-        return {
-            status: 'success',
-            documents: documents,
-            pagination: {
-                page,
-                limit,
-                total,
-                pages: Math.ceil(total / limit)
-            }
-        };
-    } catch (error) {
-        console.error('GetAllSpecialEvents error:', error);
-        return {
-            status: 'failed',
-            code: 500,
-            message: 'Failed to fetch all special events'
         };
     }
 };
@@ -358,9 +358,9 @@ const deleteEvent = async (mosqueId, year, eventId, userId) => {
 };
 
 module.exports = {
+    getAllSpecialEvents,
     getMosqueSpecialEvents,
     getMosqueSpecialEventsByYear,
-    getAllSpecialEvents,
     createYearDocument,
     addEvent,
     updateEvent,

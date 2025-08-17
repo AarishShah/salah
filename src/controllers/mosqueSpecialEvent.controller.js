@@ -1,6 +1,19 @@
 const mosqueSpecialEventService = require("../services/mosqueSpecialEvent.service");
 const catchError = require("../utils/catchError");
 
+// Admin: Get all special events
+const getAllSpecialEvents = catchError(async (req, res) => {
+    const { page = 1, limit = 20 } = req.query;
+    
+    const result = await mosqueSpecialEventService.getAllSpecialEvents(parseInt(page), parseInt(limit));
+    
+    if (result.status === 'failed') {
+        return res.status(result.code || 500).json(result);
+    }
+    
+    return res.json(result);
+});
+
 // Get all year documents for a mosque
 const getMosqueSpecialEvents = catchError(async (req, res) => {
     const { mosqueId } = req.params;
@@ -22,19 +35,6 @@ const getMosqueSpecialEventsByYear = catchError(async (req, res) => {
     
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
-    }
-    
-    return res.json(result);
-});
-
-// Admin: Get all special events
-const getAllSpecialEvents = catchError(async (req, res) => {
-    const { page = 1, limit = 20 } = req.query;
-    
-    const result = await mosqueSpecialEventService.getAllSpecialEvents(parseInt(page), parseInt(limit));
-    
-    if (result.status === 'failed') {
-        return res.status(result.code || 500).json(result);
     }
     
     return res.json(result);
@@ -119,9 +119,9 @@ const deleteEvent = catchError(async (req, res) => {
 });
 
 module.exports = {
+    getAllSpecialEvents,
     getMosqueSpecialEvents,
     getMosqueSpecialEventsByYear,
-    getAllSpecialEvents,
     createYearDocument,
     addEvent,
     updateEvent,
