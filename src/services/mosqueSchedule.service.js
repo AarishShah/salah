@@ -5,6 +5,7 @@ const OfficialMeeqat = require('../models/officialMeeqat.model');
 const MosqueSpecialEvent = require('../models/mosqueSpecialEvent.model');
 
 // Import helpers
+const { getDateRange } = require('../helpers/mosqueSchedule/defaultDateHelpers');
 const { getDayOfYear } = require('../helpers/mosqueSchedule/dateTimeHelpers');
 const { buildYearSchedule } = require('../helpers/mosqueSchedule/scheduleBuilderHelpers');
 const generateCSV = require('../helpers/mosqueSchedule/exportHelpers/csvExportHelper');
@@ -16,14 +17,10 @@ const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
     try {
         const currentYear = new Date().getFullYear();
         
-        // Default date range to current year if not provided
-        if (!startDate || !endDate) {
-            startDate = new Date(`${currentYear}-01-01`);
-            endDate = new Date(`${currentYear}-12-31`);
-        } else {
-            startDate = new Date(startDate);
-            endDate = new Date(endDate);
-        }
+        // Get date range with defaults
+        const dateRange = getDateRange(startDate, endDate);
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
 
         // Find schedule for the requested year
         const requestedYear = startDate.getFullYear();
