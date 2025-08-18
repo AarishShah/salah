@@ -22,7 +22,7 @@ router
     .get("/:mosqueId/:year", editorAuth, controller.getMosqueSpecialEventsByYear)
     .post("/:mosqueId/:year", editorAuth, controller.createYearDocument)
     .post("/:mosqueId/:year/event", editorAuth, controller.addEvent)
-    .put("/:mosqueId/:year/event/:eventId", editorAuth, controller.updateEvent)
+    .put("/:mosqueId/:year/event/:eventId", editorAuth, controller.updateEvent) // @safwannazir911 Problem: I can put 2024 data in 2025 calender. Fix this!
     .delete("/:mosqueId/:year/event/:eventId", editorAuth, controller.deleteEvent);
 
 module.exports = router;
