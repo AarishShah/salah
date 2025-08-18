@@ -9,7 +9,6 @@ const userRoutes = require("./user.routes");
 const editorRequestRoutes = require("./editorRequest.routes");
 const adminRoutes = require("./admin.routes");
 const mosqueMapRoutes = require('./mosque.routes');
-// const prayerTimingRoutes = require("./prayerTiming.routes");
 const officialMeeqatRoutes = require("./officialMeeqat.routes");
 const meeqatConfigRoutes = require("./meeqatConfig.routes");
 const mosqueMeeqatRoutes = require("./mosqueMeeqat.routes");
