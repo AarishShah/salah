@@ -7,29 +7,33 @@ const Auth = require("../middleware/auth.middleware");
 // Middleware configurations
 const userAuth = Auth({ allowedRoles: ['user', 'editor', 'admin'] });
 const editorAuth = Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true });
-const adminEditorAuth = Auth({ allowedRoles: ['editor', 'admin'] });
 
 // --- Public Routes (All authenticated users) ---
-// Get schedule with date range filtering
-router.get("/:mosqueId/schedule", userAuth, controller.getScheduleByDateRange);
 
-// Download schedule in various formats
-router.get("/:mosqueId/download", userAuth, controller.downloadSchedule);
+router
+    // Get schedule with date range filtering
+    .get("/:mosqueId/schedule", userAuth, controller.getScheduleByDateRange)
+
+    // Download schedule in various formats
+    .get("/:mosqueId/download", userAuth, controller.downloadSchedule);
+
 
 // --- Editor/Admin Routes ---
+
 // Get all schedules for a mosque (minimal data, paginated)
-router.get("/:mosqueId", adminEditorAuth, controller.getAllSchedules);
+router
+    .get("/:mosqueId", editorAuth, controller.getAllSchedules)
 
-// Get full schedule document by ID
-router.get("/:mosqueId/:scheduleId", adminEditorAuth, controller.getScheduleById);
+    // Get full schedule document by ID
+    get("/:mosqueId/:scheduleId", editorAuth, controller.getScheduleById)
 
-// Generate new schedule
-router.post("/generate/:mosqueId/:year", editorAuth, controller.generateSchedule);
+    // Generate new schedule
+    post("/generate/:mosqueId/:year", editorAuth, controller.generateSchedule)
 
-// Update special events in existing schedule
-router.put("/:scheduleId/update-events", editorAuth, controller.updateSpecialEvents);
+    // Update special events in existing schedule
+    put("/:mosqueId/:scheduleId/update-events", editorAuth, controller.updateSpecialEvents)
 
-// Delete schedule
-router.delete("/:scheduleId", editorAuth, controller.deleteSchedule);
+    // Delete schedule
+    delete("/:mosqueId/:scheduleId", editorAuth, controller.deleteSchedule);
 
 module.exports = router;
