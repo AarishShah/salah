@@ -7,7 +7,6 @@
 const authSchemas = require('./schemas/auth');
 const userSchemas = require('./schemas/user');
 const mosqueSchemas = require('./schemas/mosque');
-const prayerTimingSchemas = require('./schemas/prayerTiming');
 const adminSchemas = require('./schemas/admin');
 const editorRequestSchemas = require('./schemas/editorRequest');
 const commonSchemas = require('./schemas/common');
@@ -19,7 +18,6 @@ const officialMeeqatSchemas = require('./schemas/officialMeeqat');
 const authPaths = require('./paths/auth');
 const userPaths = require('./paths/user');
 const mosquePaths = require('./paths/mosque');
-const prayerTimingPaths = require('./paths/prayerTiming');
 const adminPaths = require('./paths/admin');
 const editorRequestPaths = require('./paths/editorRequest');
 const meeqatConfigPaths = require('./paths/meeqatConfig');
@@ -65,7 +63,6 @@ const swaggerSpec = {
       ...authSchemas,
       ...userSchemas,
       ...mosqueSchemas,
-      ...prayerTimingSchemas,
       ...adminSchemas,
       ...editorRequestSchemas,
       ...meeqatConfigSchemas,
@@ -165,10 +162,6 @@ const swaggerSpec = {
       description: 'Mosque information and management'
     },
     {
-      name: 'PrayerTiming',
-      description: 'Prayer timing data and updates'
-    },
-    {
       name: 'Admin',
       description: 'Administrative functions (Admin only)'
     },
@@ -194,7 +187,6 @@ const swaggerSpec = {
     ...authPaths,
     ...userPaths,
     ...mosquePaths,
-    ...prayerTimingPaths,
     ...adminPaths,
     ...editorRequestPaths,
     ...meeqatConfigPaths,

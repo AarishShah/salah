@@ -9,10 +9,11 @@ const userRoutes = require("./user.routes");
 const editorRequestRoutes = require("./editorRequest.routes");
 const adminRoutes = require("./admin.routes");
 const mosqueMapRoutes = require('./mosque.routes');
-// const prayerTimingRoutes = require("./prayerTiming.routes");
 const officialMeeqatRoutes = require("./officialMeeqat.routes");
 const meeqatConfigRoutes = require("./meeqatConfig.routes");
 const mosqueMeeqatRoutes = require("./mosqueMeeqat.routes");
+const mosqueSpecialEventRoutes = require("./mosqueSpecialEvent.routes");
+const mosqueScheduleRoutes = require("./mosqueSchedule.routes");
 const swaggerRoutes = require('./swagger.routes');
 
 // Health check endpoint
@@ -24,10 +25,12 @@ router.use('/api/users', userRoutes);
 router.use('/api/editorRequest', editorRequestRoutes); // might need to move this to user routes
 router.use('/api/admin', adminRoutes);
 router.use('/api/mosque', mosqueMapRoutes);
-// router.use('/api/prayer-timings', prayerTimingRoutes);
 router.use('/api/official-meeqat', officialMeeqatRoutes);
 router.use('/api/meeqat-config', meeqatConfigRoutes);
-router.use('/api/mosqueMeeqat', mosqueMeeqatRoutes);
+router.use('/api/mosqueMeeqat', mosqueMeeqatRoutes); // don't use camelCase for route names, instead use kebab-case
+router.use('/api/mosque-special-events', mosqueSpecialEventRoutes);
+router.use('/api/mosque-schedule', mosqueScheduleRoutes);
+
 
 // Documentation routes
 router.use('/api/docs', swaggerRoutes);
