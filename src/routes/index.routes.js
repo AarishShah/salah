@@ -26,7 +26,6 @@ router.use('/api/users', userRoutes);
 router.use('/api/editorRequest', editorRequestRoutes); // might need to move this to user routes
 router.use('/api/admin', adminRoutes);
 router.use('/api/mosque', mosqueMapRoutes);
-// router.use('/api/prayer-timings', prayerTimingRoutes);
 router.use('/api/official-meeqat', officialMeeqatRoutes);
 router.use('/api/meeqat-config', meeqatConfigRoutes);
 router.use('/api/mosqueMeeqat', mosqueMeeqatRoutes); // don't use camelCase for route names, instead use kebab-case
