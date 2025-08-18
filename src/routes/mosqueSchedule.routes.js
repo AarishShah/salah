@@ -25,15 +25,15 @@ router
     .get("/:mosqueId", editorAuth, controller.getAllSchedules)
 
     // Get full schedule document by ID
-    get("/:mosqueId/:scheduleId", editorAuth, controller.getScheduleById)
+    .get("/:mosqueId/:scheduleId", editorAuth, controller.getScheduleById)
 
     // Generate new schedule
-    post("/generate/:mosqueId/:year", editorAuth, controller.generateSchedule)
+    .post("/generate/:mosqueId/:year", editorAuth, controller.generateSchedule)
 
     // Update special events in existing schedule
-    put("/:mosqueId/:scheduleId/update-events", editorAuth, controller.updateSpecialEvents)
+    .put("/:mosqueId/:scheduleId/update-events", editorAuth, controller.updateSpecialEvents)
 
     // Delete schedule
-    delete("/:mosqueId/:scheduleId", editorAuth, controller.deleteSchedule);
+    .delete("/:mosqueId/:scheduleId", editorAuth, controller.deleteSchedule);
 
 module.exports = router;
