@@ -122,7 +122,7 @@ const buildYearSchedule = async (mosque, mosqueMeeqat, specialEvents, year, user
         }
 
         schedule.push(daySchedule);
-        console.log(`Mapped day ${dayNum} for year ${year} to ${date.toDateString()}`)
+        // console.log(`Mapped day ${dayNum} for year ${year} to ${date.toDateString()}`)  // For Debugging
     }
 
     // Calculate isha end times and midnight
