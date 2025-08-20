@@ -40,11 +40,15 @@ const updateProfile = async (userId, updates) => {
         //If the user tries to update phone, phoneVerified status should be set to false
 
 
+
         Object.keys(updates).forEach(key => {
             if (allowedUpdates.includes(key)) {
                 filteredUpdates[key] = updates[key];
             }
         });
+
+
+
 
         if (Object.keys(filteredUpdates).length === 0) {
             return {
@@ -59,6 +63,13 @@ const updateProfile = async (userId, updates) => {
             filteredUpdates,
             { new: true, runValidators: true }
         ).select('-refreshTokens -__v');
+
+
+        if (filteredUpdates.phone) {
+            user.phoneVerified = false;
+            await user.save();
+        }
+
 
         if (!user) {
             return {
