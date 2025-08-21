@@ -17,8 +17,8 @@ router
     .get("/editor-requests", adminAuth, controller.getEditorRequests)
     .put("/editor-requests/:requestId", adminAuth, controller.handleEditorRequest)
     .get("/:userId", adminAuth, controller.getUser)
-    .put("/:userId/role", adminAuth, controller.updateUserRole)
     .put("/:userId/status", adminAuth, controller.updateUserStatus)
+    .put("/:userId/role", adminAuth, controller.updateUserRole)
     .put("/:userId/mosques", adminAuth, controller.updateUserMosques);
 
 module.exports = router;
