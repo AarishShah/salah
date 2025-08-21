@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema({
         trim: true,
         sparse: true // Allows null/undefined values while maintaining uniqueness
     },
-    
+
     phoneVerified: {
         type: Boolean,
         default: false
@@ -70,6 +70,9 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+
+    deactivatedAt: Date,
+
     isBlocked: {
         type: Boolean,
         default: false
