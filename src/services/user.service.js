@@ -37,14 +37,14 @@ const updateProfile = async (userId, updates) => {
         const allowedUpdates = ['name', 'phone', 'language'];
         const filteredUpdates = {};
 
-        //If the user tries to update phone, phoneVerified status should be set to false
-
-
         Object.keys(updates).forEach(key => {
             if (allowedUpdates.includes(key)) {
                 filteredUpdates[key] = updates[key];
             }
         });
+
+
+
 
         if (Object.keys(filteredUpdates).length === 0) {
             return {
@@ -54,19 +54,43 @@ const updateProfile = async (userId, updates) => {
             };
         }
 
-        const user = await User.findByIdAndUpdate(
-            userId,
-            filteredUpdates,
-            { new: true, runValidators: true }
-        ).select('-refreshTokens -__v');
+        // First, find the current user to compare phone numbers
+        const currentUser = await User.findById(userId);
 
-        if (!user) {
+        if (!currentUser) {
             return {
                 status: 'failed',
                 code: 404,
                 message: 'User not found'
             };
         }
+
+
+        if (filteredUpdates.phone) {
+            if (currentUser.phone) {
+                switch (currentUser.phone != filteredUpdates.phone) {
+                    case true:
+                        filteredUpdates.phoneVerified = false;
+                        break;
+                    case false:
+                        delete filteredUpdates.phone;
+                        return {
+                            status: 'failed',
+                            code: 400,
+                            message: 'Profile update failed. Current phone number is the same as the new phone number'
+                        };
+                }
+            }
+
+        }
+
+
+        // Update the user with filtered updates
+        const user = await User.findByIdAndUpdate(
+            userId,
+            filteredUpdates,
+            { new: true, runValidators: true }
+        ).select('-refreshTokens -__v');
 
         return {
             status: 'success',
@@ -111,6 +135,7 @@ const deleteAccount = async (userId) => {
         user.isActive = false;
         user.refreshTokens = []; // Clear all tokens
         user.assignedMosques = []; // Remove mosque assignments
+        user.deactivatedAt = new Date();
         await user.save();
 
         return {

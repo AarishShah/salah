@@ -69,6 +69,28 @@ const googleSignIn = async (idToken) => {
                     message: 'Account is blocked. Contact admin.'
                 };
             }
+            //Check if user is inactive
+            if (!user.isActive && user.deactivatedAt) {
+                const deactivatedDate = new Date(user.deactivatedAt);
+                const currentDate = new Date();
+                currentDate.setMonth(currentDate.getMonth() - 6);
+
+                if (deactivatedDate < currentDate) {
+                    //Should not be called(just in case) as the users should be deleted after 6 months of inactivity. New user should be created.
+                    return {
+                        status: 'failed',
+                        code: 403,
+                        message: 'Account has been permanently deleted. Please contact admin if you want to reactivate your account.'
+                    }
+                }
+                else {
+                    user.isActive = true;
+                    user.deactivatedAt = null;
+                }
+            }
+
+
+
         } else {
             // Create new user
             user = new User({
