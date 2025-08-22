@@ -374,15 +374,12 @@ const updateUserRole = async (userId, newRole, mosqueIds) => {
         }
 
         // Prevent demoting last admin
-        if (user.role === 'admin' && newRole !== 'admin') {
-            const adminCount = await User.countDocuments({ role: 'admin', isActive: true });
-            if (adminCount <= 1) {
-                return {
-                    status: 'failed',
-                    code: 400,
-                    message: 'Cannot demote the last admin'
-                };
-            }
+        if (user.role === 'admin') {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Admin cannot be demoted'
+            };
         }
 
         // If changing to editor, must have mosques
