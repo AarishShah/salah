@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const EditorRequest = require('../models/editorRequest.model');
 const Mosque = require('../models/mosque.model');
+const pushNotificationService = require('../services/pushNotification.service');
 
 // Admin Services
 const getAllUsers = async (filters) => {
@@ -288,6 +289,17 @@ const handleEditorRequest = async (requestId, action, adminId, rejectionReason) 
             // Update user role and assign mosques
             user.role = 'editor';
             user.assignedMosques = request.requestedMosques;
+
+
+            //Send push notification to the user
+            const notification = {
+                title: 'Editor Request Approved',
+                body: 'Your editor request has been approved',
+            };
+
+            await pushNotificationService.sendToUser(user._id, notification);
+
+
             await user.save();
 
             // ADDED: Update contact person in each assigned mosque
