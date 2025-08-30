@@ -314,20 +314,24 @@ const generateSchedule = async (mosqueId, year, userId) => {
         });
 
         // Send push notifications to users who favorited this mosque
-        try {
-            const { notifyScheduleUpdate } = require('./pushNotification.service');
-            await notifyScheduleUpdate(
-                mosqueId,
-                {
-                    eventType: 'generated',
-                    year: newSchedule.year,
-                    scheduleId: newSchedule._id.toString()
-                }
-            );
-        } catch (notificationError) {
-            console.error('Failed to send schedule notifications:', notificationError);
-            // Don't fail the schedule generation if notifications fail
+        if (currentYear === year) {
+            console.log('Sending schedule notification for current year');
+            try {
+                const { notifyScheduleUpdate } = require('./pushNotification.service');
+                await notifyScheduleUpdate(
+                    mosqueId,
+                    {
+                        eventType: 'generated',
+                        year: newSchedule.year,
+                        scheduleId: newSchedule._id.toString()
+                    }
+                );
+            } catch (notificationError) {
+                console.error('Failed to send schedule notifications:', notificationError);
+                // Don't fail the schedule generation if notifications fail
+            }
         }
+
 
         return {
             status: 'success',
