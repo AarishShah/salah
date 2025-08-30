@@ -70,6 +70,12 @@ const mosqueSchema = new mongoose.Schema({
     mosqueSpecialEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MosqueSpecialEvent', default: null }],
     mosqueSchedule: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MosqueSchedule', default: null }],
 
+    // Users who have favorited this mosque
+    favoritedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+
     // Tracking
     isActive: {
         type: Boolean,
