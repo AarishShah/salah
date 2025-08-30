@@ -34,7 +34,7 @@ const generateTimings = (officialTimings, config) => {
         // Process each prayer time with traditional for loop
         for (let j = 0; j < PRAYERS.length; j++) {
             const prayer = PRAYERS[j];
-            const prayerConfig = config.jamaat[prayer];
+            const prayerConfig = config.jamaat[prayer] || {};
             let jamaatTime;
 
             // 1. Apply fixed time or delay

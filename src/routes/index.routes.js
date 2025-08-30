@@ -15,6 +15,7 @@ const mosqueMeeqatRoutes = require("./mosqueMeeqat.routes");
 const mosqueSpecialEventRoutes = require("./mosqueSpecialEvent.routes");
 const mosqueScheduleRoutes = require("./mosqueSchedule.routes");
 const pushNotificationRoutes = require("./pushNotification.routes");
+const favoritesMosqueRoutes = require("./favoritesMosque.routes");
 const swaggerRoutes = require('./swagger.routes');
 
 // Health check endpoint
@@ -32,6 +33,7 @@ router.use('/api/mosqueMeeqat', mosqueMeeqatRoutes); // don't use camelCase for 
 router.use('/api/mosque-special-events', mosqueSpecialEventRoutes);
 router.use('/api/mosque-schedule', mosqueScheduleRoutes);
 router.use('/api/notifications', pushNotificationRoutes);
+router.use('/api/favorites-mosques', favoritesMosqueRoutes);
 
 // Documentation routes
 router.use('/api/docs', swaggerRoutes);

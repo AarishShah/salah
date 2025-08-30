@@ -13,6 +13,7 @@ const commonSchemas = require('./schemas/common');
 const meeqatConfigSchemas = require('./schemas/meeqatConfig');
 const mosqueMeeqatSchemas = require('./schemas/mosqueMeeqat');
 const officialMeeqatSchemas = require('./schemas/officialMeeqat');
+const favoritesMosqueSchemas = require('./schemas/favoritesMosque');
 
 // Import path documentation
 const authPaths = require('./paths/auth');
@@ -23,6 +24,7 @@ const editorRequestPaths = require('./paths/editorRequest');
 const meeqatConfigPaths = require('./paths/meeqatConfig');
 const mosqueMeeqatPaths = require('./paths/mosqueMeeqat');
 const officialMeeqatPaths = require('./paths/officialMeeqat');
+const favoritesMosquePaths = require('./paths/favoritesMosque');
 
 // Create the OpenAPI specification
 const swaggerSpec = {
@@ -67,7 +69,8 @@ const swaggerSpec = {
       ...editorRequestSchemas,
       ...meeqatConfigSchemas,
       ...mosqueMeeqatSchemas,
-      ...officialMeeqatSchemas
+      ...officialMeeqatSchemas,
+      ...favoritesMosqueSchemas
     },
     responses: {
       UnauthorizedError: {
@@ -180,6 +183,14 @@ const swaggerSpec = {
     {
       name: 'MosqueMeeqat',
       description: 'Mosque Meeqat management'
+    },
+    {
+      name: 'FavoritesMosque',
+      description: 'Favorite mosques and prayer notifications'
+    },
+    {
+      name: 'Scheduler',
+      description: 'Scheduler management (Admin only)'
     }
   ],
   // Merge all path documentation
@@ -191,7 +202,8 @@ const swaggerSpec = {
     ...editorRequestPaths,
     ...meeqatConfigPaths,
     ...mosqueMeeqatPaths,
-    ...officialMeeqatPaths
+    ...officialMeeqatPaths,
+    ...favoritesMosquePaths
   }
 };
 

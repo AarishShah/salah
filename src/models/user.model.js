@@ -65,6 +65,14 @@ const userSchema = new mongoose.Schema({
         ref: 'Mosque'
     }],
 
+    // For users - their favorite mosques for notifications
+    favoritesMosques: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Mosque',
+    }],
+
+
+
     // Account Status
     isActive: {
         type: Boolean,

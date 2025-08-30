@@ -16,7 +16,7 @@ const generateHTML = require('../helpers/mosqueSchedule/exportHelpers/htmlExport
 const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
     try {
         const currentYear = new Date().getFullYear();
-        
+
         // Get date range with defaults
         const dateRange = getDateRange(startDate, endDate);
         startDate = dateRange.startDate;
@@ -24,7 +24,7 @@ const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
 
         // Find schedule for the requested year
         const requestedYear = startDate.getFullYear();
-        
+
         const schedule = await MosqueSchedule.findOne({
             mosque: mosqueId,
             year: requestedYear
@@ -73,14 +73,14 @@ const downloadSchedule = async (mosqueId, startDate, endDate, fileFormat, userId
     try {
         // Get schedule data first
         const scheduleData = await getScheduleByDateRange(mosqueId, startDate, endDate, userId);
-        
+
         if (scheduleData.status === 'failed') {
             return scheduleData;
         }
 
         // Get mosque details
         const mosque = await Mosque.findById(mosqueId).select('name locality');
-        
+
         if (!mosque) {
             return {
                 status: 'failed',
@@ -98,25 +98,25 @@ const downloadSchedule = async (mosqueId, startDate, endDate, fileFormat, userId
                 contentType = 'text/csv';
                 filename = `${baseFilename}.csv`;
                 break;
-                
+
             case 'json':
                 content = JSON.stringify(scheduleData, null, 2);
                 contentType = 'application/json';
                 filename = `${baseFilename}.json`;
                 break;
-                
+
             case 'ics':
                 content = await generateICS(scheduleData.schedule, mosque);
                 contentType = 'text/calendar';
                 filename = `${baseFilename}.ics`;
                 break;
-                
+
             case 'html':
                 content = await generateHTML(scheduleData.schedule, mosque);
                 contentType = 'text/html';
                 filename = `${baseFilename}.html`;
                 break;
-                
+
             default:
                 return {
                     status: 'failed',
@@ -192,10 +192,10 @@ const getScheduleById = async (mosqueId, scheduleId, userId) => {
             _id: scheduleId,
             mosque: mosqueId
         })
-        .populate('mosque', 'name address locality')
-        .populate('generatedBy', 'name email')
-        .populate('sourceMosqueMeeqat')
-        .populate('sourceOfficialMeeqat');
+            .populate('mosque', 'name address locality')
+            .populate('generatedBy', 'name email')
+            .populate('sourceMosqueMeeqat')
+            .populate('sourceOfficialMeeqat');
 
         if (!schedule) {
             return {
@@ -224,7 +224,7 @@ const getScheduleById = async (mosqueId, scheduleId, userId) => {
 const generateSchedule = async (mosqueId, year, userId) => {
     try {
         const currentYear = new Date().getFullYear();
-        
+
         // Validate year range
         if (year < currentYear || year > currentYear + 2) {
             return {
@@ -297,7 +297,7 @@ const generateSchedule = async (mosqueId, year, userId) => {
         if (existingSchedules.length >= 3) {
             const oldestSchedule = existingSchedules[0];
             await MosqueSchedule.findByIdAndDelete(oldestSchedule._id);
-            
+
             // Update mosque reference
             await Mosque.findByIdAndUpdate(mosqueId, {
                 $pull: { mosqueSchedule: oldestSchedule._id }
@@ -312,6 +312,22 @@ const generateSchedule = async (mosqueId, year, userId) => {
         await Mosque.findByIdAndUpdate(mosqueId, {
             $push: { mosqueSchedule: newSchedule._id }
         });
+
+        // Send push notifications to users who favorited this mosque
+        try {
+            const { notifyScheduleUpdate } = require('./pushNotification.service');
+            await notifyScheduleUpdate(
+                mosqueId,
+                {
+                    eventType: 'generated',
+                    year: newSchedule.year,
+                    scheduleId: newSchedule._id.toString()
+                }
+            );
+        } catch (notificationError) {
+            console.error('Failed to send schedule notifications:', notificationError);
+            // Don't fail the schedule generation if notifications fail
+        }
 
         return {
             status: 'success',
@@ -334,7 +350,7 @@ const generateSchedule = async (mosqueId, year, userId) => {
 const updateSpecialEvents = async (scheduleId, userId) => {
     try {
         const schedule = await MosqueSchedule.findById(scheduleId);
-        
+
         if (!schedule) {
             return {
                 status: 'failed',
@@ -360,14 +376,14 @@ const updateSpecialEvents = async (scheduleId, userId) => {
         for (const event of specialEvents.events) {
             const eventDate = new Date(event.date);
             const dayOfYear = getDayOfYear(eventDate);
-            
+
             // Find the corresponding day in schedule
             const scheduleDay = schedule.schedule.find(day => day.dayNumber === dayOfYear);
-            
+
             if (scheduleDay) {
                 // Clear existing special events for this day
                 scheduleDay.specialEvents = [];
-                
+
                 // Add updated event
                 scheduleDay.specialEvents.push({
                     eventType: event.eventType,
@@ -375,7 +391,7 @@ const updateSpecialEvents = async (scheduleId, userId) => {
                     timings: event.timings,
                     notes: event.notes
                 });
-                
+
                 // Update day type if it has special events
                 if (scheduleDay.dayType === 'regular') {
                     scheduleDay.dayType = 'special';
@@ -405,7 +421,7 @@ const updateSpecialEvents = async (scheduleId, userId) => {
 const deleteSchedule = async (scheduleId, userId) => {
     try {
         const schedule = await MosqueSchedule.findById(scheduleId);
-        
+
         if (!schedule) {
             return {
                 status: 'failed',

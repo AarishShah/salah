@@ -1,5 +1,6 @@
 const { Expo } = require('expo-server-sdk');
 const PushToken = require('../models/pushToken.model');
+const mosqueModel = require('../models/mosque.model');
 
 // Initialize Expo SDK
 const expo = new Expo();
@@ -334,6 +335,88 @@ const sendToTokens = async (tokens, notificationData) => {
     return results;
 };
 
+
+const notifyScheduleUpdate = async (mosqueId, data) => {
+    try {
+
+
+        // Get mosque details for notification
+        const mosque = await mosqueModel.findById(mosqueId).select('name favoritedBy');
+
+        if (!mosque) {
+            console.log('Mosque not found');
+            return {
+                status: 'failed',
+                message: 'Mosque not found'
+            };
+        }
+
+        const mosqueName = mosque.name || 'Unknown Mosque';
+        const favoritedBy = mosque.favoritedBy || [];
+
+        // Create notification content based on event type
+        let title, body;
+        const eventType = data.eventType || 'updated';
+
+        switch (eventType) {
+            case 'generated':
+                title = '🕌 New Schedule Available';
+                body = `Prayer schedule generated for ${mosqueName}`;
+                break;
+            case 'updated':
+                title = '🔄 Schedule Updated';
+                body = `Prayer times updated for ${mosqueName}`;
+                break;
+            case 'deleted':
+                title = '🗑️ Schedule Removed';
+                body = `Prayer schedule removed for ${mosqueName}`;
+                break;
+            default:
+                title = '📅 Schedule Notification';
+                body = `Schedule changes for ${mosqueName}`;
+        }
+
+        const notificationData = {
+            title,
+            body,
+            data: {
+                type: 'SCHEDULE_UPDATE',
+                mosqueId,
+                mosqueName,
+                timestamp: new Date().toISOString(),
+                ...data
+            }
+        };
+
+        if (favoritedBy.length === 0) {
+            console.log('No users have favorited this mosque');
+            return {
+                status: 'success',
+                message: 'No users to notify',
+                notificationsSent: 0
+            };
+        }
+        console.log(notificationData);
+
+        const result = await sendToUsers(favoritedBy, notificationData);
+
+        return {
+            status: 'success',
+            message: `Schedule notifications sent to ${favoritedBy.length} users`,
+            notificationsSent: favoritedBy.length,
+            details: result
+        };
+
+    } catch (error) {
+        console.error('NotifyScheduleUpdate error:', error);
+        return {
+            status: 'failed',
+            message: 'Failed to send schedule update notifications',
+            error: error.message
+        };
+    }
+};
+
 module.exports = {
     registerToken,
     unregisterToken,
@@ -341,5 +424,6 @@ module.exports = {
     sendToUser,
     sendToUsers,
     sendToAll,
-    cleanupExpiredTokens
+    cleanupExpiredTokens,
+    notifyScheduleUpdate
 };
