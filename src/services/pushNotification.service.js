@@ -396,7 +396,6 @@ const notifyScheduleUpdate = async (mosqueId, data) => {
                 notificationsSent: 0
             };
         }
-        console.log(notificationData);
 
         const result = await sendToUsers(favoritedBy, notificationData);
 
