@@ -13,12 +13,12 @@ const adminAuth = Auth({ allowedRoles: ['admin'] });
 router
     .get('/map/nearby', userAuth, controller.getNearbyMosques)
     .get('/search', userAuth, controller.searchMosques)
-    .get('/:mosqueid', userAuth, controller.getMosqueById);
+    .get('/:mosqueId', userAuth, controller.getMosqueById);
 
 // --- Editor Routes ---
 router
     .patch('/:mosqueId/official-meeqat', editorAuth, controller.setOfficialMeeqat);
-    
+
 // --- Admin Routes ---
 router
     .post('/', adminAuth, controller.createMosque)

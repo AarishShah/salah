@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
+const specialEventsScheduler = require("./services/specialEventsScheduler.service");
 
 // Database connection
 require("./db/mongoose");
@@ -38,6 +39,8 @@ app.listen(port, () => {
     console.log(`SALAH server is running on port ${port}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+    // Start special events notification scheduler at startup
+    specialEventsScheduler.start();
 });
 
 module.exports = app;
