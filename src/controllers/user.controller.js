@@ -128,6 +128,14 @@ const getNotificationPreferences = catchError(async (req, res) => {
     return res.json(result);
 })
 
+const updateNotificationPreferences = catchError(async (req, res) => {
+    const { userId } = req.user;
+    const updates = req.body;
+    const result = await userService.updateNotificationPreferences(userId, updates);
+    if (result.status === 'failed') return res.status(result.code || 400).json(result);
+    return res.json(result);
+});
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -136,5 +144,6 @@ module.exports = {
     createEditorAdditionalRequest,
     getEditorRequestStatus,
     verifyPhoneStatus,
-    getNotificationPreferences
+    getNotificationPreferences,
+    updateNotificationPreferences
 };

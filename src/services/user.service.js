@@ -133,6 +133,53 @@ const getNotificationPreferences = async (userId) => {
     }
 };
 
+const updateNotificationPreferences = async (userId, updates) => {
+    try {
+        // Validate shape: allow only expected keys
+        const allowedTopLevel = ['enabled', 'reminderMinutes', 'preferences'];
+        const allowedPrefs = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jummah', 'specialEvents'];
+
+        const setOps = {};
+
+        if (Object.prototype.hasOwnProperty.call(updates, 'enabled')) {
+            setOps['notificationPreferences.enabled'] = Boolean(updates.enabled);
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'reminderMinutes')) {
+            const val = Number(updates.reminderMinutes);
+            if (!Number.isFinite(val) || val < 0 || val > 60) {
+                return { status: 'failed', code: 400, message: 'reminderMinutes must be between 0 and 60' };
+            }
+            setOps['notificationPreferences.reminderMinutes'] = val;
+        }
+        if (updates.preferences && typeof updates.preferences === 'object') {
+            Object.keys(updates.preferences).forEach(key => {
+                if (allowedPrefs.includes(key)) {
+                    setOps[`notificationPreferences.preferences.${key}`] = Boolean(updates.preferences[key]);
+                }
+            });
+        }
+
+        if (Object.keys(setOps).length === 0) {
+            return { status: 'failed', code: 400, message: 'No valid fields to update' };
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: setOps },
+            { new: true, runValidators: true }
+        ).select('notificationPreferences');
+
+        if (!user) {
+            return { status: 'failed', code: 404, message: 'User not found' };
+        }
+
+        return { status: 'success', message: 'Notification preferences updated', preferences: user.notificationPreferences };
+    } catch (error) {
+        console.error('UpdateNotificationPreferences error:', error);
+        return { status: 'failed', code: 500, message: 'Failed to update notification preferences' };
+    }
+};
+
 
 
 const deleteAccount = async (userId) => {
@@ -514,4 +561,5 @@ module.exports = {
     getEditorRequestStatus,
     verifyPhoneStatus,
     getNotificationPreferences,
+    updateNotificationPreferences
 };

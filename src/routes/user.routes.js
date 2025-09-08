@@ -19,6 +19,7 @@ router
     .delete("/account", allAuth, controller.deleteAccount)
     // Notification preferences
     .get("/notification-preferences", allAuth, controller.getNotificationPreferences)
+    .patch("/notification-preferences", allAuth, controller.updateNotificationPreferences)
 
 
     .post("/editor-request", userAuth, controller.createEditorRequest)
