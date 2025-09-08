@@ -76,10 +76,10 @@ const searchMosques = catchError(async (req, res) => {
 
 // Get mosque by ID
 const getMosqueById = catchError(async (req, res) => {
-    const { id } = req.params;
+    const { mosqueId } = req.params;
     const { userId, role } = req.user;
 
-    const result = await mosqueService.getMosqueById(id, userId, role);
+    const result = await mosqueService.getMosqueById(mosqueId, userId, role);
 
     if (result.status === 'failed') {
         return res.status(result.code || 404).json(result);
