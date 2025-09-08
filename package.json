@@ -7,7 +7,6 @@
     "dev": "nodemon src/app.js",
     "build": "echo 'No build step for backend' && exit 0",
     "lint": "echo 'No lint step for backend' && exit 0",
-    "backfill:notification-preferences": "node scripts/backfillNotificationPreferences.js",
     "test": "echo 'No tests yet' && exit 0"
   },
   "author": "Flattr",
