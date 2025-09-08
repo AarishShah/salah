@@ -107,6 +107,34 @@ const updateProfile = async (userId, updates) => {
     }
 };
 
+const getNotificationPreferences = async (userId) => {
+    try {
+        const user = await User.findById(userId).select('notificationPreferences');
+
+        if (!user) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'User not found'
+            };
+        }
+
+        return {
+            status: 'success',
+            preferences: user.notificationPreferences || {}
+        };
+    } catch (error) {
+        console.error('GetNotificationPreferences error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to fetch notification preferences'
+        };
+    }
+};
+
+
+
 const deleteAccount = async (userId) => {
     try {
         const user = await User.findById(userId);
@@ -485,4 +513,5 @@ module.exports = {
     createEditorAdditionalRequest,
     getEditorRequestStatus,
     verifyPhoneStatus,
+    getNotificationPreferences,
 };

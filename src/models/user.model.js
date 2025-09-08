@@ -72,6 +72,22 @@ const userSchema = new mongoose.Schema({
     }],
 
 
+    // Notification preferences
+    notificationPreferences: {
+        enabled: { type: Boolean, default: false },
+        reminderMinutes: { type: Number, default: 0, min: 0, max: 60 },
+        preferences: {
+            fajr: { type: Boolean, default: false },
+            dhuhr: { type: Boolean, default: false },
+            asr: { type: Boolean, default: false },
+            maghrib: { type: Boolean, default: false },
+            isha: { type: Boolean, default: false },
+            jummah: { type: Boolean, default: false },
+            specialEvents: { type: Boolean, default: false }
+        }
+    },
+
+
 
     // Account Status
     isActive: {
