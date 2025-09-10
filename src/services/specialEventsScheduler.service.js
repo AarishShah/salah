@@ -40,6 +40,7 @@ async function runSpecialEventsNotificationOnce() {
 
         const filteredMosques = mosques.filter(m =>
             Array.isArray(m.favoritedBy) && m.favoritedBy.length > 0
+            && Array.isArray(m.mosqueSpecialEvents) && m.mosqueSpecialEvents.length > 0
         );
 
         for (const mosque of filteredMosques) {
