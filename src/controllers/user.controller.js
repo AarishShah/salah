@@ -1,4 +1,5 @@
 const userService = require("../services/user.service");
+const pushNotificationService = require("../services/pushNotification.service");
 const catchError = require("../utils/catchError");
 
 // User Controllers
@@ -120,6 +121,26 @@ const verifyPhoneStatus = catchError(async (req, res) => {
     return res.json(result);
 });
 
+const sendNotification = catchError(async (req, res) => {
+    const { userId } = req.user;
+    const { mosqueId, notificationData } = req.body;
+
+    const result = await pushNotificationService.sendToMosqueUsers(mosqueId, notificationData, userId);
+
+    if (result.status === 'failed') return res.status(result.code || 400).json(result);
+    return res.json(result);
+})
+
+const scheduleNotification = catchError(async (req, res) => {
+    const { userId } = req.user;
+    const { mosqueId, notificationData, scheduledFor } = req.body;
+
+    const result = await pushNotificationService.scheduleNotification(mosqueId, notificationData, scheduledFor, userId);
+    if (result.status === 'failed') return res.status(result.code || 400).json(result);
+    return res.json(result);
+})
+
+
 // Notification preferences
 const getNotificationPreferences = catchError(async (req, res) => {
     const { userId } = req.user;
@@ -136,6 +157,8 @@ const updateNotificationPreferences = catchError(async (req, res) => {
     return res.json(result);
 });
 
+
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -144,6 +167,8 @@ module.exports = {
     createEditorAdditionalRequest,
     getEditorRequestStatus,
     verifyPhoneStatus,
+    sendNotification,
+    scheduleNotification,
     getNotificationPreferences,
     updateNotificationPreferences
 };

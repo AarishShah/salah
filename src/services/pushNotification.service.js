@@ -416,6 +416,122 @@ const notifyScheduleUpdate = async (mosqueId, data) => {
     }
 };
 
+// Send notification to mosque users (for editors)
+const sendToMosqueUsers = async (mosqueId, notificationData, editorId) => {
+    try {
+        // Get mosque with favorited users
+        const mosque = await mosqueModel.findById(mosqueId)
+            .populate({
+                path: 'favoritedBy',
+                select: 'notificationPreferences',
+                match: {
+                    'notificationPreferences.enabled': true
+                }
+            });
+
+        if (!mosque) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
+        }
+
+        const users = mosque.favoritedBy.map(u => u._id);
+        if (users.length === 0) {
+            return {
+                status: 'success',
+                message: 'No users to notify for this mosque',
+                data: { sent: 0, failed: 0, skipped: 0 }
+            };
+        }
+
+        // Add mosque context to notification data
+        const enhancedNotificationData = {
+            ...notificationData,
+            data: {
+                ...notificationData.data,
+                type: 'MOSQUE_ANNOUNCEMENT',
+                mosqueId: mosqueId.toString(),
+                mosqueName: mosque.name,
+                sentBy: editorId
+            }
+        };
+
+        const result = await sendToUsers(users, enhancedNotificationData);
+        return result;
+
+    } catch (error) {
+        console.error('SendToMosqueUsers error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to send notification to mosque users'
+        };
+    }
+};
+
+// Schedule notification for later (for editors)
+const scheduleNotification = async (mosqueId, notificationData, scheduledFor, editorId) => {
+    try {
+        // Validate scheduled time
+        const scheduledDate = new Date(scheduledFor);
+        const now = new Date();
+
+        if (scheduledDate <= now) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Scheduled time must be in the future'
+            };
+        }
+
+        // Get mosque to validate it exists
+        const mosque = await mosqueModel.findById(mosqueId);
+        if (!mosque) {
+            return {
+                status: 'failed',
+                code: 404,
+                message: 'Mosque not found'
+            };
+        }
+
+        // Create scheduled notification record
+        const ScheduledNotification = require('../models/scheduledNotification.model');
+        const scheduledNotif = new ScheduledNotification({
+            mosque: mosqueId,
+            editor: editorId,
+            title: notificationData.title,
+            body: notificationData.body,
+            data: notificationData.data || {},
+            sound: notificationData.sound || 'default',
+            priority: notificationData.priority || 'normal',
+            scheduledFor: scheduledDate,
+            status: 'scheduled'
+        });
+
+        await scheduledNotif.save();
+
+        return {
+            status: 'success',
+            message: 'Notification scheduled successfully',
+            data: {
+                scheduledNotificationId: scheduledNotif._id,
+                scheduledFor: scheduledDate,
+                mosqueName: mosque.name
+            }
+        };
+
+    } catch (error) {
+        console.error('ScheduleNotification error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to schedule notification'
+        };
+    }
+};
+
 module.exports = {
     registerToken,
     unregisterToken,
@@ -424,5 +540,7 @@ module.exports = {
     sendToUsers,
     sendToAll,
     cleanupExpiredTokens,
-    notifyScheduleUpdate
+    notifyScheduleUpdate,
+    sendToMosqueUsers,
+    scheduleNotification
 };

@@ -20,10 +20,13 @@ router
     // Notification preferences
     .get("/notification-preferences", allAuth, controller.getNotificationPreferences)
     .patch("/notification-preferences", allAuth, controller.updateNotificationPreferences)
-
-
     .post("/editor-request", userAuth, controller.createEditorRequest)
+
     .post("/editor-additional-request", editorAuth, controller.createEditorAdditionalRequest)
+    .post("/send-notification", editorAuth, controller.sendNotification)
+    .post("/schedule-notification", editorAuth, controller.scheduleNotification)
+
+    // Editor request status
     .get("/editor-request/status", allAuth, controller.getEditorRequestStatus)
     .patch("/phone-verification", allAuth, controller.verifyPhoneStatus);
 

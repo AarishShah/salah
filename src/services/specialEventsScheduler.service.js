@@ -90,7 +90,7 @@ async function runSpecialEventsNotificationOnce() {
 }
 
 function start() {
-    runSpecialEventsNotificationOnce();
+    // runSpecialEventsNotificationOnce();
     // Run daily at 00:00 UTC
     cron.schedule('0 0 * * *', async () => {
         await runSpecialEventsNotificationOnce();

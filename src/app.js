@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
 const specialEventsScheduler = require("./services/specialEventsScheduler.service");
+const scheduledNotificationScheduler = require("./services/scheduledNotificationScheduler.service");
 
 // Database connection
 require("./db/mongoose");
@@ -41,6 +42,8 @@ app.listen(port, () => {
     console.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
     // Start special events notification scheduler at startup
     specialEventsScheduler.start();
+    // Start scheduled notification scheduler at startup
+    scheduledNotificationScheduler.start();
 });
 
 module.exports = app;

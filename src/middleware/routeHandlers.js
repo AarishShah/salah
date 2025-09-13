@@ -39,8 +39,8 @@ const globalErrorHandler = (err, req, res, next) => {
     });
 };
 
-module.exports = { 
-    healthCheck, 
-    notFoundHandler, 
-    globalErrorHandler 
+module.exports = {
+    healthCheck,
+    notFoundHandler,
+    globalErrorHandler
 };
