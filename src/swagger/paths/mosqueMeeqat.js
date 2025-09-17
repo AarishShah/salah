@@ -6,7 +6,7 @@ module.exports = {
   '/api/mosqueMeeqat/{mosqueId}': {
     get: {
       summary: 'Get mosque Meeqat',
-      description: 'Retrieve the Meeqat for a specific mosque',
+      description: 'Retrieve the Meeqat for a specific mosque with optional date range and format filtering',
       tags: ['MosqueMeeqat'],
       security: [
         {
@@ -23,6 +23,37 @@ module.exports = {
           },
           description: 'ID of the mosque',
           example: '507f1f77bcf86cd799439011'
+        },
+        {
+          name: 'startDate',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'Start date for filtering (YYYY-MM-DD)'
+        },
+        {
+          name: 'endDate',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'End date for filtering (YYYY-MM-DD)'
+        },
+        {
+          name: 'timeFormat',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            enum: ['12h', '24h', 'original'],
+            default: '12h'
+          },
+          description: 'Time format for display'
         }
       ],
       responses: {
@@ -153,7 +184,7 @@ module.exports = {
       }
     }
   },
-  
+
   '/api/mosqueMeeqat/generate/{mosqueId}': {
     post: {
       summary: 'Generate mosque Meeqat',
@@ -215,7 +246,7 @@ module.exports = {
       }
     }
   },
-  
+
   '/api/mosqueMeeqat/approve/{mosqueId}': {
     patch: {
       summary: 'Approve mosque Meeqat',
@@ -277,11 +308,11 @@ module.exports = {
       }
     }
   },
-  
-  '/api/mosqueMeeqat/{mosqueId}/html': {
+
+  '/api/mosqueMeeqat/{mosqueId}/download-html': {
     get: {
-      summary: 'Get mosque Meeqat HTML',
-      description: 'Retrieve the HTML content of the Meeqat for a specific mosque',
+      summary: 'Download mosque Meeqat HTML',
+      description: 'Download the HTML content of the Meeqat for a specific mosque with optional filtering',
       tags: ['MosqueMeeqat'],
       security: [
         {
@@ -298,15 +329,47 @@ module.exports = {
           },
           description: 'ID of the mosque',
           example: '507f1f77bcf86cd799439011'
+        },
+        {
+          name: 'startDate',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'Start date for filtering (YYYY-MM-DD)'
+        },
+        {
+          name: 'endDate',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'End date for filtering (YYYY-MM-DD)'
+        },
+        {
+          name: 'timeFormat',
+          in: 'query',
+          required: false,
+          schema: {
+            type: 'string',
+            enum: ['12h', '24h', 'original'],
+            default: '12h'
+          },
+          description: 'Time format for display'
         }
       ],
       responses: {
         '200': {
-          description: 'Mosque Meeqat HTML retrieved successfully',
+          description: 'Mosque Meeqat HTML file downloaded successfully',
           content: {
-            'application/json': {
+            'text/html': {
               schema: {
-                $ref: '#/components/schemas/MosqueMeeqatHTMLResponse'
+                type: 'string',
+                format: 'binary'
               }
             }
           }

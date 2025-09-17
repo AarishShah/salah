@@ -48,6 +48,18 @@ const unregisterToken = catchError(async (req, res) => {
     return res.json(result);
 });
 
+// Get user's push tokens
+const getUserTokens = catchError(async (req, res) => {
+    const { userId } = req.user;
+
+    const tokens = await PushToken.find({ user: userId, isActive: true });
+
+    return res.json({
+        status: 'success',
+        data: tokens
+    });
+});
+
 // Send notification to specific user
 const sendToUser = catchError(async (req, res) => {
     const { userId } = req.params;
@@ -133,24 +145,100 @@ const cleanupExpiredTokens = catchError(async (req, res) => {
     return res.json(result);
 });
 
-// Get user's push tokens
-const getUserTokens = catchError(async (req, res) => {
-    const { userId } = req.user;
 
-    const tokens = await PushToken.find({ user: userId, isActive: true });
+// Get scheduled notifications for a mosque (for editors and admins)
+const getScheduledNotifications = catchError(async (req, res) => {
+    const { mosqueId } = req.params;
+    const { userId, role } = req.user;
+    const { page = 1, limit = 10, status } = req.query;
+
+    const ScheduledNotification = require('../models/scheduledNotification.model');
+
+    // Build query based on user role and mosque context
+    let query = { editor: userId };
+    if (status) {
+        query.status = status;
+    }
+
+    // For editors: filter by specific mosque
+    // For admins: show both single mosque and multi-mosque notifications
+    if (role === 'editor') {
+        query.mosque = mosqueId;
+    } else if (role === 'admin') {
+        // Admin can see notifications for specific mosque OR notifications that include this mosque in array
+        query.$or = [
+            { mosque: mosqueId },
+            { mosques: mosqueId }
+        ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [notifications, total] = await Promise.all([
+        ScheduledNotification.find(query)
+            .populate('mosque', 'name')
+            .populate('mosques', 'name')
+            .sort({ scheduledFor: -1 })
+            .skip(skip)
+            .limit(parseInt(limit)),
+        ScheduledNotification.countDocuments(query)
+    ]);
 
     return res.json({
         status: 'success',
-        data: tokens
+        data: notifications,
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            pages: Math.ceil(total / limit)
+        }
+    });
+});
+
+// Cancel scheduled notification (for editors and admins)
+const cancelScheduledNotification = catchError(async (req, res) => {
+    const { notificationId } = req.params;
+    const { userId } = req.user;
+
+    const ScheduledNotification = require('../models/scheduledNotification.model');
+
+    const notification = await ScheduledNotification.findOne({
+        _id: notificationId,
+        editor: userId,
+        status: 'scheduled'
+    }).populate('mosque', 'name').populate('mosques', 'name');
+
+    if (!notification) {
+        return res.status(404).json({
+            status: 'failed',
+            code: 404,
+            message: 'Scheduled notification not found or already processed'
+        });
+    }
+
+    await notification.cancel();
+
+    // Determine notification type for response message
+    const isMultiMosque = notification.mosques && notification.mosques.length > 0;
+    const targetDescription = isMultiMosque
+        ? `${notification.mosques.length} mosques`
+        : notification.mosque.name;
+
+    return res.json({
+        status: 'success',
+        message: `Scheduled notification for ${targetDescription} cancelled successfully`
     });
 });
 
 module.exports = {
     registerToken,
     unregisterToken,
+    getUserTokens,
     sendToUser,
     sendToUsers,
     sendToAll,
     cleanupExpiredTokens,
-    getUserTokens
+    getScheduledNotifications,
+    cancelScheduledNotification
 };

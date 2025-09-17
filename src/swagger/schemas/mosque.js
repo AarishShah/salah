@@ -205,6 +205,44 @@ module.exports = {
     required: ['q']
   },
 
+  // Basic mosque information (used in references)
+  MosqueBasic: {
+    type: 'object',
+    properties: {
+      _id: {
+        $ref: '#/components/schemas/ObjectId'
+      },
+      name: {
+        type: 'string',
+        example: 'Masjid Al-Noor'
+      },
+      address: {
+        type: 'string',
+        example: '123 Main Street, Downtown'
+      },
+      locality: {
+        type: 'string',
+        example: 'Karachi'
+      },
+      sect: {
+        type: 'string',
+        enum: ['sunni', 'shia'],
+        example: 'sunni'
+      },
+      schoolOfThought: {
+        type: 'string',
+        enum: ['hanafi', 'shafi', 'maliki', 'hanbali'],
+        nullable: true,
+        example: 'hanafi'
+      },
+      isActive: {
+        type: 'boolean',
+        example: true
+      }
+    },
+    required: ['_id', 'name', 'address', 'locality', 'sect', 'isActive']
+  },
+
   // Mosque list item (for search results)
   MosqueListItem: {
     type: 'object',

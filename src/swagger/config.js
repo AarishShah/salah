@@ -14,6 +14,9 @@ const meeqatConfigSchemas = require('./schemas/meeqatConfig');
 const mosqueMeeqatSchemas = require('./schemas/mosqueMeeqat');
 const officialMeeqatSchemas = require('./schemas/officialMeeqat');
 const favoritesMosqueSchemas = require('./schemas/favoritesMosque');
+const mosqueScheduleSchemas = require('./schemas/mosqueSchedule');
+const mosqueSpecialEventSchemas = require('./schemas/mosqueSpecialEvent');
+const pushNotificationSchemas = require('./schemas/pushNotification');
 
 // Import path documentation
 const authPaths = require('./paths/auth');
@@ -25,6 +28,9 @@ const meeqatConfigPaths = require('./paths/meeqatConfig');
 const mosqueMeeqatPaths = require('./paths/mosqueMeeqat');
 const officialMeeqatPaths = require('./paths/officialMeeqat');
 const favoritesMosquePaths = require('./paths/favoritesMosque');
+const mosqueSchedulePaths = require('./paths/mosqueSchedule');
+const mosqueSpecialEventPaths = require('./paths/mosqueSpecialEvent');
+const pushNotificationPaths = require('./paths/pushNotification');
 
 // Create the OpenAPI specification
 const swaggerSpec = {
@@ -70,7 +76,10 @@ const swaggerSpec = {
       ...meeqatConfigSchemas,
       ...mosqueMeeqatSchemas,
       ...officialMeeqatSchemas,
-      ...favoritesMosqueSchemas
+      ...favoritesMosqueSchemas,
+      ...mosqueScheduleSchemas,
+      ...mosqueSpecialEventSchemas,
+      ...pushNotificationSchemas
     },
     responses: {
       UnauthorizedError: {
@@ -189,6 +198,18 @@ const swaggerSpec = {
       description: 'Favorite mosques and prayer notifications'
     },
     {
+      name: 'MosqueSchedule',
+      description: 'Mosque prayer schedule management'
+    },
+    {
+      name: 'MosqueSpecialEvent',
+      description: 'Special events management for mosques'
+    },
+    {
+      name: 'PushNotification',
+      description: 'Push notification management'
+    },
+    {
       name: 'Scheduler',
       description: 'Scheduler management (Admin only)'
     }
@@ -203,7 +224,10 @@ const swaggerSpec = {
     ...meeqatConfigPaths,
     ...mosqueMeeqatPaths,
     ...officialMeeqatPaths,
-    ...favoritesMosquePaths
+    ...favoritesMosquePaths,
+    ...mosqueSchedulePaths,
+    ...mosqueSpecialEventPaths,
+    ...pushNotificationPaths
   }
 };
 

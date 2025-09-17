@@ -313,6 +313,13 @@ const createMosque = async (data) => {
 
         await newMosque.save();
 
+        // Add mosque to admin's mosqueGroup
+        await User.findByIdAndUpdate(
+            createdBy,
+            { $addToSet: { mosqueGroup: newMosque._id } },
+            { new: true }
+        );
+
         // Populate creator info
         await newMosque.populate('createdBy', 'name email');
 
@@ -392,6 +399,15 @@ const softDeleteMosque = async (id, userId) => {
             },
             { new: true, runValidators: true }
         ).populate('updatedBy', 'name email');
+
+        // Remove mosque from admin's mosqueGroup
+        if (mosque.createdBy) {
+            await User.findByIdAndUpdate(
+                mosque.createdBy,
+                { $pull: { mosqueGroup: id } },
+                { new: true }
+            );
+        }
 
         return {
             status: 'success',

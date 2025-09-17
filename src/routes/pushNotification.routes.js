@@ -8,7 +8,9 @@ const {
     sendToUsers,
     sendToAll,
     cleanupExpiredTokens,
-    getUserTokens
+    getUserTokens,
+    getScheduledNotifications,
+    cancelScheduledNotification
 } = require('../controllers/pushNotification.controller');
 
 // User routes (require authentication)
@@ -19,6 +21,18 @@ router.post('/register', registerToken);
 router.post('/unregister', unregisterToken);
 router.get('/tokens', getUserTokens);
 
+// Editor routes (require editor or admin role)
+router.use(Auth({ allowedRoles: ['editor', 'admin'] }));
+
+// Send notifications to mosque users - moved to user routes
+// router.post('/send/mosque/:mosqueId', Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true }), sendToMosqueUsers);
+
+// Schedule notifications - moved to user routes
+// router.post('/schedule/mosque', Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true }), scheduleNotification);
+
+router.get('/scheduled/mosque/:mosqueId', Auth({ allowedRoles: ['editor', 'admin'], checkMosqueAccess: true }), getScheduledNotifications);
+router.delete('/scheduled/:notificationId', cancelScheduledNotification);
+
 // Admin routes (require admin role)
 router.use(Auth({ allowedRoles: ['admin'] }));
 
@@ -26,7 +40,6 @@ router.use(Auth({ allowedRoles: ['admin'] }));
 router.post('/send/user/:userId', sendToUser);
 router.post('/send/users', sendToUsers);
 router.post('/send/all', sendToAll);
-
 
 // System management
 router.post('/cleanup/expired-tokens', cleanupExpiredTokens);

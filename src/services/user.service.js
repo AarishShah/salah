@@ -7,7 +7,8 @@ const getProfile = async (userId) => {
     try {
         const user = await User.findById(userId)
             .select('-refreshTokens -__v')
-            .populate('assignedMosques', 'name locality address');
+            .populate('assignedMosques', 'name locality address')
+            .populate('mosqueGroup', 'name locality address');
 
         if (!user) {
             return {

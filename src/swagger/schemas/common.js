@@ -218,5 +218,36 @@ module.exports = {
     enum: ['user', 'editor', 'admin'],
     description: 'User role defining permissions',
     example: 'user'
+  },
+
+  // Alternative pagination info (used in new modules)
+  PaginationInfo: {
+    type: 'object',
+    properties: {
+      currentPage: {
+        type: 'integer',
+        example: 1
+      },
+      totalPages: {
+        type: 'integer',
+        example: 5
+      },
+      totalItems: {
+        type: 'integer',
+        example: 50
+      },
+      itemsPerPage: {
+        type: 'integer',
+        example: 10
+      },
+      hasNextPage: {
+        type: 'boolean',
+        example: true
+      },
+      hasPrevPage: {
+        type: 'boolean',
+        example: false
+      }
+    }
   }
 };

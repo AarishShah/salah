@@ -40,6 +40,7 @@ async function runSpecialEventsNotificationOnce() {
 
         const filteredMosques = mosques.filter(m =>
             Array.isArray(m.favoritedBy) && m.favoritedBy.length > 0
+            && Array.isArray(m.mosqueSpecialEvents) && m.mosqueSpecialEvents.length > 0
         );
 
         for (const mosque of filteredMosques) {
@@ -89,11 +90,12 @@ async function runSpecialEventsNotificationOnce() {
 }
 
 function start() {
-    runSpecialEventsNotificationOnce();
-    // Run daily at 00:00 UTC
+    // runSpecialEventsNotificationOnce();
+    // Run daily at 00:00 in configured timezone
+    const timezone = process.env.TIMEZONE || 'UTC';
     cron.schedule('0 0 * * *', async () => {
         await runSpecialEventsNotificationOnce();
-    }, { timezone: 'UTC' });
+    }, { timezone });
 }
 
 module.exports = { start };

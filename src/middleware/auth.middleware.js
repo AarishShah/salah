@@ -6,14 +6,14 @@ const Auth = (options = {}) => {
     try {
       // Extract token
       const token = req.headers.authorization?.split(' ')[1];
-      
+
       if (!token) {
         return res.status(401).json({
           status: 'failed',
           message: 'No token provided'
         });
       }
-      
+
       // Verify token
       let decoded;
       try {
@@ -24,23 +24,23 @@ const Auth = (options = {}) => {
           message: 'Invalid or expired token'
         });
       }
-      
+
       const user = await User.findById(decoded.userId).select('-refreshTokens');
-      
+
       if (!user) {
         return res.status(404).json({
           status: 'failed',
           message: 'User not found'
         });
       }
-      
+
       if (!user.isActive || user.isBlocked) {
         return res.status(403).json({
           status: 'failed',
           message: 'Account is inactive or blocked'
         });
       }
-      
+
       // Check role requirements
       if (options.allowedRoles && !options.allowedRoles.includes(user.role)) {
         return res.status(403).json({
@@ -48,12 +48,12 @@ const Auth = (options = {}) => {
           message: 'Insufficient permissions'
         });
       }
-      
+
       if (options.requiredRole) {
         const roleHierarchy = { 'user': 0, 'editor': 1, 'admin': 2 };
         const userLevel = roleHierarchy[user.role];
         const requiredLevel = roleHierarchy[options.requiredRole];
-        
+
         if (userLevel < requiredLevel) {
           return res.status(403).json({
             status: 'failed',
@@ -61,7 +61,7 @@ const Auth = (options = {}) => {
           });
         }
       }
-      
+
       // Check specific permission
       if (options.requiredPermission) {
         const userPermissions = user.permissions;
@@ -72,19 +72,19 @@ const Auth = (options = {}) => {
           });
         }
       }
-      
+
       // Check mosque access for editors
       if (options.checkMosqueAccess) {
         const mosqueId = req.params.mosqueId || req.body.mosqueId;
-        
+
         if (mosqueId && !user.canEditMosque(mosqueId)) {
           return res.status(403).json({
             status: 'failed',
-            message: 'You do not have access to edit this mosque'
+            message: 'Not authorized to access this resource'
           });
         }
       }
-      
+
       // Attach user to request
       req.user = {
         userId: user._id,
@@ -95,9 +95,9 @@ const Auth = (options = {}) => {
         assignedMosques: user.assignedMosques,
         // permissions: user.permissions
       };
-      
+
       next();
-      
+
     } catch (error) {
       console.error('Auth middleware error:', error);
       return res.status(500).json({
