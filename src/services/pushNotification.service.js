@@ -591,6 +591,12 @@ const scheduleNotificationForAdminMosques = async (notificationData, scheduledFo
         const mosques = await mosqueModel.find({
             _id: { $in: admin.mosqueGroup },
             isActive: true
+        }).populate({
+            path: 'favoritedBy',
+            select: 'notificationPreferences',
+            match: {
+                'notificationPreferences.enabled': true
+            }
         });
 
         if (mosques.length === 0) {
@@ -666,7 +672,13 @@ const scheduleNotification = async (mosqueId, notificationData, scheduledFor, se
         }
 
         // Get mosque to validate it exists
-        const mosque = await mosqueModel.findById(mosqueId);
+        const mosque = await mosqueModel.findById(mosqueId).populate({
+            path: 'favoritedBy',
+            select: 'notificationPreferences',
+            match: {
+                'notificationPreferences.enabled': true
+            }
+        });
         if (!mosque) {
             return {
                 status: 'failed',
