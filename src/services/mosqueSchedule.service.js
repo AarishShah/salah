@@ -12,6 +12,56 @@ const generateCSV = require('../helpers/mosqueSchedule/exportHelpers/csvExportHe
 const generateICS = require('../helpers/mosqueSchedule/exportHelpers/icsExportHelper');
 const generateHTML = require('../helpers/mosqueSchedule/exportHelpers/htmlExportHelper');
 
+/**
+ * Optimize schedule response by removing unused fields and objects
+ * @param {Array} schedule - Array of daily schedule objects
+ * @returns {Array} Optimized schedule array
+ */
+const optimizeScheduleResponse = (schedule) => {
+    return schedule.map(day => {
+        const optimizedDay = {
+            date: day.date,
+            dayNumber: day.dayNumber,
+            dayType: day.dayType,
+            
+            // Only include jamaatTime for each prayer (remove startTime, adhanTime, endTime)
+            fajr: {
+                jamaatTime: day.fajr.jamaatTime
+            },
+            dhuhr: {
+                jamaatTime: day.dhuhr.jamaatTime
+            },
+            asr: {
+                jamaatTime: day.asr.jamaatTime
+            },
+            maghrib: {
+                jamaatTime: day.maghrib.jamaatTime
+            },
+            isha: {
+                jamaatTime: day.isha.jamaatTime
+            },
+            
+            // Keep jummah object for Friday prayers (if it exists)
+            ...(day.jummah && {
+                jummah: {
+                    adhanTime: day.jummah.adhanTime,
+                    khutbahStartTime: day.jummah.khutbahStartTime,
+                    jamaatTime: day.jummah.jamaatTime
+                }
+            }),
+            
+            // Keep special events if they exist
+            ...(day.specialEvents && day.specialEvents.length > 0 && {
+                specialEvents: day.specialEvents
+            })
+            
+            // Removed: zenith, sunrise, sunset, midnight objects
+        };
+        
+        return optimizedDay;
+    });
+};
+
 // Get schedule with date range filtering
 const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
     try {
@@ -49,13 +99,16 @@ const getScheduleByDateRange = async (mosqueId, startDate, endDate) => {
             return dayDate >= startDate && dayDate <= endDate;
         });
 
+        // Optimize schedule response by removing unused fields
+        const optimizedSchedule = optimizeScheduleResponse(filteredSchedule);
+
         return {
             status: 'success',
             dateRange: { startDate, endDate },
             mosque: mosqueId,
             year: schedule.year,
-            totalDays: filteredSchedule.length,
-            schedule: filteredSchedule
+            totalDays: optimizedSchedule.length,
+            schedule: optimizedSchedule
         };
 
     } catch (error) {
