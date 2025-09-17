@@ -4,6 +4,9 @@ const Mosque = require('../models/mosque.model');
 // Add mosque to favorites
 const addFavoriteMosque = async (userId, mosqueId) => {
     try {
+        // Get max favorites limit from environment variable
+        const maxFavoritesAllowed = parseInt(process.env.MAX_FAVOURITE_DEFAULT) || 1;
+
         // Check if mosque exists and is active
         const mosque = await Mosque.findOne({ _id: mosqueId, isActive: true });
         if (!mosque) {
@@ -29,16 +32,24 @@ const addFavoriteMosque = async (userId, mosqueId) => {
             return {
                 status: 'failed',
                 code: 409,
-                message: 'Mosque is already in your favorites'
+                message: 'Mosque is already in your favorites',
+                data: {
+                    totalFavorites: user.favoritesMosques.length,
+                    maxAllowed: maxFavoritesAllowed
+                }
             };
         }
 
-        // Check limit (currently 1, but designed for future expansion)
-        if (user.favoritesMosques.length >= 1) {
+        // Check limit based on environment variable
+        if (user.favoritesMosques.length >= maxFavoritesAllowed) {
             return {
                 status: 'failed',
                 code: 400,
-                message: 'You can only have 1 favorite mosque currently. Please remove the existing one first.'
+                message: `You can only have ${maxFavoritesAllowed} favorite mosque${maxFavoritesAllowed > 1 ? 's' : ''} currently. Please remove an existing one first.`,
+                data: {
+                    totalFavorites: user.favoritesMosques.length,
+                    maxAllowed: maxFavoritesAllowed
+                }
             };
         }
 
@@ -63,7 +74,9 @@ const addFavoriteMosque = async (userId, mosqueId) => {
             status: 'success',
             message: 'Mosque added to favorites successfully',
             data: {
-                favoritesMosques: user.favoritesMosques
+                favoritesMosques: user.favoritesMosques,
+                totalFavorites: user.favoritesMosques.length,
+                maxAllowed: maxFavoritesAllowed
             }
         };
 
@@ -117,11 +130,16 @@ const removeFavoriteMosque = async (userId, mosqueId) => {
         // Populate remaining mosque details for response
         await user.populate('favoritesMosques', 'name address locality coordinates sect schoolOfThought');
 
+        // Get max favorites limit from environment variable
+        const maxFavoritesAllowed = parseInt(process.env.MAX_FAVOURITE_DEFAULT) || 1;
+
         return {
             status: 'success',
             message: 'Mosque removed from favorites successfully',
             data: {
-                favoritesMosques: user.favoritesMosques
+                favoritesMosques: user.favoritesMosques,
+                totalFavorites: user.favoritesMosques.length,
+                maxAllowed: maxFavoritesAllowed
             }
         };
 
@@ -153,12 +171,15 @@ const getFavoritesMosques = async (userId) => {
         // Filter out inactive mosques
         const activeFavorites = user.favoritesMosques.filter(mosque => mosque.isActive);
 
+        // Get max favorites limit from environment variable
+        const maxFavoritesAllowed = parseInt(process.env.MAX_FAVOURITE_DEFAULT) || 1;
+
         return {
             status: 'success',
             data: {
                 favoritesMosques: activeFavorites,
                 totalFavorites: activeFavorites.length,
-                maxAllowed: 1 // Can be increased in future
+                maxAllowed: maxFavoritesAllowed
             }
         };
 
@@ -189,6 +210,7 @@ const getMosqueFavorites = async (mosqueId) => {
                 message: 'Mosque not found'
             };
         }
+
 
         return {
             status: 'success',
