@@ -523,7 +523,7 @@ const sendToAdminMosques = async (notificationData, adminId) => {
                 ...notificationData,
                 data: {
                     ...notificationData.data,
-                    type: 'ADMIN_ANNOUNCEMENT',
+                    type: 'MOSQUE_ANNOUNCEMENT',
                     mosqueId: mosque._id.toString(),
                     mosqueName: mosque.name,
                     sentBy: adminId
@@ -617,7 +617,7 @@ const scheduleNotificationForAdminMosques = async (notificationData, scheduledFo
             body: notificationData.body,
             data: {
                 ...notificationData.data,
-                type: 'ADMIN_ANNOUNCEMENT',
+                type: 'MOSQUE_ANNOUNCEMENT',
                 mosquesCount: mosques.length,
                 mosqueNames: mosques.map(mosque => mosque.name)
             },
@@ -694,7 +694,13 @@ const scheduleNotification = async (mosqueId, notificationData, scheduledFor, se
             editor: senderId,
             title: notificationData.title,
             body: notificationData.body,
-            data: notificationData.data || {},
+            data: {
+                ...notificationData.data,
+                type: 'MOSQUE_ANNOUNCEMENT',
+                mosqueId: mosqueId.toString(),
+                mosqueName: mosque.name,
+                sentBy: senderId
+            },
             sound: notificationData.sound || 'default',
             priority: notificationData.priority || 'normal',
             scheduledFor: scheduledDate,
