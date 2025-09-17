@@ -91,10 +91,11 @@ async function runSpecialEventsNotificationOnce() {
 
 function start() {
     // runSpecialEventsNotificationOnce();
-    // Run daily at 00:00 UTC
+    // Run daily at 00:00 in configured timezone
+    const timezone = process.env.TIMEZONE || 'UTC';
     cron.schedule('0 0 * * *', async () => {
         await runSpecialEventsNotificationOnce();
-    }, { timezone: 'UTC' });
+    }, { timezone });
 }
 
 module.exports = { start };

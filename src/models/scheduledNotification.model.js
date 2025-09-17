@@ -1,12 +1,20 @@
 const mongoose = require('mongoose');
 
 const scheduledNotificationSchema = new mongoose.Schema({
-    // Mosque this notification is for
+    // Mosque(s) this notification is for - can be single mosque or array for admin notifications
     mosque: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Mosque',
-        required: true
+        required: function () {
+            return !this.mosques || this.mosques.length === 0;
+        }
     },
+
+    // Array of mosques for admin notifications (alternative to single mosque)
+    mosques: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Mosque'
+    }],
 
     // Editor who created this notification
     editor: {
@@ -85,6 +93,7 @@ const scheduledNotificationSchema = new mongoose.Schema({
 // Indexes for efficient querying
 scheduledNotificationSchema.index({ scheduledFor: 1, status: 1 });
 scheduledNotificationSchema.index({ mosque: 1, status: 1 });
+scheduledNotificationSchema.index({ mosques: 1, status: 1 });
 scheduledNotificationSchema.index({ editor: 1, status: 1 });
 
 // Virtual to check if notification is ready to send

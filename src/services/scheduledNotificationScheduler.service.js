@@ -5,44 +5,78 @@ const cron = require('node-cron');
 // Process scheduled notifications
 async function processScheduledNotifications() {
     try {
-        console.log('Processing scheduled notifications...');
 
         // Find notifications that are ready to send
         const readyNotifications = await ScheduledNotification.find({
             status: 'scheduled',
             scheduledFor: { $lte: new Date() }
-        }).populate('mosque', 'name');
+        }).populate('mosque', 'name').populate('mosques', 'name');
 
         console.log(`Found ${readyNotifications.length} notifications ready to send`);
 
         for (const notification of readyNotifications) {
             try {
-                console.log(`Processing notification: ${notification.title} for mosque: ${notification.mosque.name}`);
+                // Determine if this is a single mosque or multi-mosque notification
+                const isMultiMosque = notification.mosques && notification.mosques.length > 0;
 
-                // Prepare notification data
-                const notificationData = {
-                    title: notification.title,
-                    body: notification.body,
-                    data: notification.data,
-                    sound: notification.sound,
-                    priority: notification.priority
-                };
+                if (isMultiMosque) {
+                    // Handle multi-mosque notification (admin notification)
+                    const mosqueNames = notification.mosques.map(m => m.name).join(', ');
+                    console.log(`Processing admin notification: ${notification.title} for mosques: ${mosqueNames}`);
 
-                // Send notification to mosque users
-                const result = await pushNotificationService.sendToMosqueUsers(
-                    notification.mosque._id,
-                    notificationData,
-                    notification.editor
-                );
+                    // Prepare notification data
+                    const notificationData = {
+                        title: notification.title,
+                        body: notification.body,
+                        data: notification.data,
+                        sound: notification.sound,
+                        priority: notification.priority
+                    };
 
-                if (result.status === 'success') {
-                    // Mark as sent with results
-                    await notification.markAsSent(result.results);
-                    console.log(`Notification sent successfully: ${notification.title}`);
+                    // Send notification to all admin mosques
+                    const result = await pushNotificationService.sendToAdminMosques(
+                        notificationData,
+                        notification.editor
+                    );
+
+                    if (result.status === 'success') {
+                        // Mark as sent with results
+                        await notification.markAsSent(result.data);
+                        console.log(`Admin notification sent successfully: ${notification.title} to ${notification.mosques.length} mosques`);
+                    } else {
+                        // Mark as failed
+                        await notification.markAsFailed(result.message);
+                        console.error(`Failed to send admin notification: ${notification.title} - ${result.message}`);
+                    }
                 } else {
-                    // Mark as failed
-                    await notification.markAsFailed(result.message);
-                    console.error(`Failed to send notification: ${notification.title} - ${result.message}`);
+                    // Handle single mosque notification (editor notification)
+                    console.log(`Processing notification: ${notification.title} for mosque: ${notification.mosque.name}`);
+
+                    // Prepare notification data
+                    const notificationData = {
+                        title: notification.title,
+                        body: notification.body,
+                        data: notification.data,
+                        sound: notification.sound,
+                        priority: notification.priority
+                    };
+
+                    // Send notification to mosque users
+                    const result = await pushNotificationService.sendToMosqueUsers(
+                        notification.mosque._id,
+                        notificationData,
+                        notification.editor
+                    );
+
+                    if (result.status === 'success') {
+                        // Mark as sent with results
+                        await notification.markAsSent(result.data);
+                        console.log(`Notification sent successfully: ${notification.title}`);
+                    } else {
+                        // Mark as failed
+                        await notification.markAsFailed(result.message);
+                        console.error(`Failed to send notification: ${notification.title} - ${result.message}`);
+                    }
                 }
 
             } catch (error) {
@@ -50,8 +84,6 @@ async function processScheduledNotifications() {
                 await notification.markAsFailed(error.message);
             }
         }
-
-        console.log('Scheduled notifications processing completed');
 
     } catch (error) {
         console.error('Error in processScheduledNotifications:', error);
@@ -78,19 +110,18 @@ async function cleanupOldNotifications() {
 
 // Start the scheduler
 function start() {
-    console.log('Starting scheduled notification scheduler...');
+    const timezone = process.env.TIMEZONE || 'UTC';
 
     // Process scheduled notifications every minute
     cron.schedule('* * * * *', async () => {
         await processScheduledNotifications();
-    }, { timezone: 'UTC' });
+    }, { timezone });
 
     // Clean up old notifications daily at 2 AM
     cron.schedule('0 2 * * *', async () => {
         await cleanupOldNotifications();
-    }, { timezone: 'UTC' });
+    }, { timezone });
 
-    console.log('Scheduled notification scheduler started');
 }
 
 module.exports = { start };

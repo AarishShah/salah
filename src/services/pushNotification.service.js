@@ -416,8 +416,8 @@ const notifyScheduleUpdate = async (mosqueId, data) => {
     }
 };
 
-// Send notification to mosque users (for editors)
-const sendToMosqueUsers = async (mosqueId, notificationData, editorId) => {
+// Send notification to mosque users (for editors and admins)
+const sendToMosqueUsers = async (mosqueId, notificationData, senderId) => {
     try {
         // Get mosque with favorited users
         const mosque = await mosqueModel.findById(mosqueId)
@@ -454,7 +454,7 @@ const sendToMosqueUsers = async (mosqueId, notificationData, editorId) => {
                 type: 'MOSQUE_ANNOUNCEMENT',
                 mosqueId: mosqueId.toString(),
                 mosqueName: mosque.name,
-                sentBy: editorId
+                sentBy: senderId
             }
         };
 
@@ -471,8 +471,187 @@ const sendToMosqueUsers = async (mosqueId, notificationData, editorId) => {
     }
 };
 
-// Schedule notification for later (for editors)
-const scheduleNotification = async (mosqueId, notificationData, scheduledFor, editorId) => {
+// Send notification to all mosques created by admin
+const sendToAdminMosques = async (notificationData, adminId) => {
+    try {
+        // Get admin user to access mosqueGroup
+        const User = require('../models/user.model');
+        const admin = await User.findById(adminId).select('mosqueGroup');
+
+        if (!admin || !admin.mosqueGroup || admin.mosqueGroup.length === 0) {
+            return {
+                status: 'success',
+                message: 'No mosques found for this admin',
+                data: { sent: 0, failed: 0, skipped: 0, mosquesCount: 0 }
+            };
+        }
+
+        // Get all mosques in admin's mosqueGroup
+        const mosques = await mosqueModel.find({
+            _id: { $in: admin.mosqueGroup },
+            isActive: true
+        }).populate({
+            path: 'favoritedBy',
+            select: 'notificationPreferences',
+            match: {
+                'notificationPreferences.enabled': true
+            }
+        });
+
+        if (mosques.length === 0) {
+            return {
+                status: 'success',
+                message: 'No mosques found for this admin',
+                data: { sent: 0, failed: 0, skipped: 0, mosquesCount: 0 }
+            };
+        }
+
+        let totalResults = { sent: 0, failed: 0, skipped: 0 };
+        let notifiedMosquesCount = 0;
+
+        // Send notifications for each mosque
+        for (const mosque of mosques) {
+            console.log("mosque", mosque);
+            const users = mosque.favoritedBy.map(u => u._id);
+            console.log("users", users);
+            if (users.length === 0) {
+                continue; // Skip mosques with no users
+            }
+
+            // Add mosque context to notification data
+            const enhancedNotificationData = {
+                ...notificationData,
+                data: {
+                    ...notificationData.data,
+                    type: 'ADMIN_ANNOUNCEMENT',
+                    mosqueId: mosque._id.toString(),
+                    mosqueName: mosque.name,
+                    sentBy: adminId
+                }
+            };
+
+            const result = await sendToUsers(users, enhancedNotificationData);
+
+            if (result.status === 'success' && result.results) {
+                totalResults.sent += result.results.sent;
+                totalResults.failed += result.results.failed;
+                totalResults.skipped += result.results.skipped;
+                notifiedMosquesCount++;
+            }
+        }
+
+        return {
+            status: 'success',
+            message: `Notifications sent to users of ${notifiedMosquesCount} mosque(s)`,
+            data: {
+                ...totalResults,
+                mosquesCount: notifiedMosquesCount,
+                totalMosquesFound: mosques.length
+            }
+        };
+
+    } catch (error) {
+        console.error('SendToAdminMosques error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to send notifications to admin mosques'
+        };
+    }
+};
+
+// Schedule notification for all mosques in admin's mosqueGroup
+const scheduleNotificationForAdminMosques = async (notificationData, scheduledFor, adminId) => {
+    try {
+        // Get admin user to access mosqueGroup
+        const User = require('../models/user.model');
+        const admin = await User.findById(adminId).select('mosqueGroup');
+
+        if (!admin || !admin.mosqueGroup || admin.mosqueGroup.length === 0) {
+            return {
+                status: 'success',
+                message: 'No mosques found for this admin',
+                data: { scheduled: 0, mosquesCount: 0 }
+            };
+        }
+
+        // Validate scheduled time
+        const scheduledDate = new Date(scheduledFor);
+        const now = new Date();
+
+        if (scheduledDate <= now) {
+            return {
+                status: 'failed',
+                code: 400,
+                message: 'Scheduled time must be in the future'
+            };
+        }
+
+        // Get all active mosques in admin's mosqueGroup
+        const mosques = await mosqueModel.find({
+            _id: { $in: admin.mosqueGroup },
+            isActive: true
+        });
+
+        if (mosques.length === 0) {
+            return {
+                status: 'success',
+                message: 'No active mosques found for this admin',
+                data: { scheduled: 0, mosquesCount: 0 }
+            };
+        }
+
+        const ScheduledNotification = require('../models/scheduledNotification.model');
+
+        // Create single scheduled notification for all mosques (optimized approach)
+        const scheduledNotif = new ScheduledNotification({
+            mosques: mosques.map(mosque => mosque._id),
+            editor: adminId,
+            title: notificationData.title,
+            body: notificationData.body,
+            data: {
+                ...notificationData.data,
+                type: 'ADMIN_ANNOUNCEMENT',
+                mosquesCount: mosques.length,
+                mosqueNames: mosques.map(mosque => mosque.name)
+            },
+            sound: notificationData.sound || 'default',
+            priority: notificationData.priority || 'normal',
+            scheduledFor: scheduledDate,
+            status: 'scheduled'
+        });
+
+        await scheduledNotif.save();
+
+        // Add reference to user's scheduledNotifications array for easier access
+        await User.findByIdAndUpdate(adminId, {
+            $push: { scheduledNotifications: scheduledNotif._id }
+        });
+
+        const scheduledCount = mosques.length;
+
+        return {
+            status: 'success',
+            message: `Notifications scheduled for ${scheduledCount} mosque(s)`,
+            data: {
+                scheduled: scheduledCount,
+                mosquesCount: mosques.length,
+                scheduledFor: scheduledDate
+            }
+        };
+
+    } catch (error) {
+        console.error('ScheduleNotificationForAdminMosques error:', error);
+        return {
+            status: 'failed',
+            code: 500,
+            message: 'Failed to schedule notifications for admin mosques'
+        };
+    }
+};
+
+// Schedule notification for later (for editors and admins)
+const scheduleNotification = async (mosqueId, notificationData, scheduledFor, senderId) => {
     try {
         // Validate scheduled time
         const scheduledDate = new Date(scheduledFor);
@@ -500,7 +679,7 @@ const scheduleNotification = async (mosqueId, notificationData, scheduledFor, ed
         const ScheduledNotification = require('../models/scheduledNotification.model');
         const scheduledNotif = new ScheduledNotification({
             mosque: mosqueId,
-            editor: editorId,
+            editor: senderId,
             title: notificationData.title,
             body: notificationData.body,
             data: notificationData.data || {},
@@ -511,6 +690,12 @@ const scheduleNotification = async (mosqueId, notificationData, scheduledFor, ed
         });
 
         await scheduledNotif.save();
+
+        // Add reference to user's scheduledNotifications array for easier access
+        const User = require('../models/user.model');
+        await User.findByIdAndUpdate(senderId, {
+            $push: { scheduledNotifications: scheduledNotif._id }
+        });
 
         return {
             status: 'success',
@@ -542,5 +727,7 @@ module.exports = {
     cleanupExpiredTokens,
     notifyScheduleUpdate,
     sendToMosqueUsers,
-    scheduleNotification
+    sendToAdminMosques,
+    scheduleNotification,
+    scheduleNotificationForAdminMosques
 };

@@ -65,6 +65,12 @@ const userSchema = new mongoose.Schema({
         ref: 'Mosque'
     }],
 
+    // For admins - which mosques they have created
+    mosqueGroup: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Mosque'
+    }],
+
     // For users - their favorite mosques for notifications
     favoritesMosques: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -86,6 +92,12 @@ const userSchema = new mongoose.Schema({
             specialEvents: { type: Boolean, default: false }
         }
     },
+
+    // Scheduled notifications created by this user (for easier access)
+    scheduledNotifications: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ScheduledNotification'
+    }],
 
 
 
@@ -135,7 +147,9 @@ userSchema.virtual('permissions').get(function () {
 
 // Method to check if user can edit a specific mosque
 userSchema.methods.canEditMosque = function (mosqueId) {
-    if (this.role === 'admin') return true;
+    if (this.role === 'admin') {
+        return this.mosqueGroup.some(id => id.toString() === mosqueId.toString());
+    }
     if (this.role === 'editor') {
         return this.assignedMosques.some(id => id.toString() === mosqueId.toString());
     }

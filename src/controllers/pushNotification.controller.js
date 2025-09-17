@@ -48,6 +48,18 @@ const unregisterToken = catchError(async (req, res) => {
     return res.json(result);
 });
 
+// Get user's push tokens
+const getUserTokens = catchError(async (req, res) => {
+    const { userId } = req.user;
+
+    const tokens = await PushToken.find({ user: userId, isActive: true });
+
+    return res.json({
+        status: 'success',
+        data: tokens
+    });
+});
+
 // Send notification to specific user
 const sendToUser = catchError(async (req, res) => {
     const { userId } = req.params;
@@ -133,145 +145,31 @@ const cleanupExpiredTokens = catchError(async (req, res) => {
     return res.json(result);
 });
 
-// Get user's push tokens
-const getUserTokens = catchError(async (req, res) => {
-    const { userId } = req.user;
 
-    const tokens = await PushToken.find({ user: userId, isActive: true });
-
-    return res.json({
-        status: 'success',
-        data: tokens
-    });
-});
-
-// Send notification to mosque users (for editors)
-const sendToMosqueUsers = catchError(async (req, res) => {
-    const { mosqueId } = req.params;
-    const { userId } = req.user;
-    const notificationData = req.body;
-
-    // Validation
-    if (!notificationData.title || !notificationData.body) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Title and body are required'
-        });
-    }
-
-    if (notificationData.title.length > 100) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Title must be 100 characters or less'
-        });
-    }
-
-    if (notificationData.body.length > 500) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Body must be 500 characters or less'
-        });
-    }
-
-    // Validate mosqueId format
-    if (!mosqueId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Invalid mosque ID format'
-        });
-    }
-
-    const result = await pushNotificationService.sendToMosqueUsers(mosqueId, notificationData, userId);
-
-    if (result.status === 'failed') {
-        return res.status(result.code || 400).json(result);
-    }
-
-    return res.json(result);
-});
-
-// Schedule notification for later (for editors)
-const scheduleNotification = catchError(async (req, res) => {
-    const { mosqueId } = req.body;
-    const { userId } = req.user;
-    const { notificationData, scheduledFor } = req.body;
-
-    // Validation
-    if (!notificationData || !notificationData.title || !notificationData.body) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Notification data with title and body is required'
-        });
-    }
-
-    if (notificationData.title.length > 100) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Title must be 100 characters or less'
-        });
-    }
-
-    if (notificationData.body.length > 500) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Body must be 500 characters or less'
-        });
-    }
-
-    if (!scheduledFor) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Scheduled time is required'
-        });
-    }
-
-    // Validate scheduled time
-    const scheduledDate = new Date(scheduledFor);
-    if (isNaN(scheduledDate.getTime())) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Invalid scheduled time format'
-        });
-    }
-
-    // Validate mosqueId format
-    if (!mosqueId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json({
-            status: 'failed',
-            code: 400,
-            message: 'Invalid mosque ID format'
-        });
-    }
-
-    const result = await pushNotificationService.scheduleNotification(mosqueId, notificationData, scheduledFor, userId);
-
-    if (result.status === 'failed') {
-        return res.status(result.code || 400).json(result);
-    }
-
-    return res.status(201).json(result);
-});
-
-// Get scheduled notifications for a mosque (for editors)
+// Get scheduled notifications for a mosque (for editors and admins)
 const getScheduledNotifications = catchError(async (req, res) => {
     const { mosqueId } = req.params;
-    const { userId } = req.user;
+    const { userId, role } = req.user;
     const { page = 1, limit = 10, status } = req.query;
 
     const ScheduledNotification = require('../models/scheduledNotification.model');
 
-    const query = { mosque: mosqueId, editor: userId };
+    // Build query based on user role and mosque context
+    let query = { editor: userId };
     if (status) {
         query.status = status;
+    }
+
+    // For editors: filter by specific mosque
+    // For admins: show both single mosque and multi-mosque notifications
+    if (role === 'editor') {
+        query.mosque = mosqueId;
+    } else if (role === 'admin') {
+        // Admin can see notifications for specific mosque OR notifications that include this mosque in array
+        query.$or = [
+            { mosque: mosqueId },
+            { mosques: mosqueId }
+        ];
     }
 
     const skip = (page - 1) * limit;
@@ -279,6 +177,7 @@ const getScheduledNotifications = catchError(async (req, res) => {
     const [notifications, total] = await Promise.all([
         ScheduledNotification.find(query)
             .populate('mosque', 'name')
+            .populate('mosques', 'name')
             .sort({ scheduledFor: -1 })
             .skip(skip)
             .limit(parseInt(limit)),
@@ -297,7 +196,7 @@ const getScheduledNotifications = catchError(async (req, res) => {
     });
 });
 
-// Cancel scheduled notification (for editors)
+// Cancel scheduled notification (for editors and admins)
 const cancelScheduledNotification = catchError(async (req, res) => {
     const { notificationId } = req.params;
     const { userId } = req.user;
@@ -308,7 +207,7 @@ const cancelScheduledNotification = catchError(async (req, res) => {
         _id: notificationId,
         editor: userId,
         status: 'scheduled'
-    });
+    }).populate('mosque', 'name').populate('mosques', 'name');
 
     if (!notification) {
         return res.status(404).json({
@@ -320,22 +219,26 @@ const cancelScheduledNotification = catchError(async (req, res) => {
 
     await notification.cancel();
 
+    // Determine notification type for response message
+    const isMultiMosque = notification.mosques && notification.mosques.length > 0;
+    const targetDescription = isMultiMosque
+        ? `${notification.mosques.length} mosques`
+        : notification.mosque.name;
+
     return res.json({
         status: 'success',
-        message: 'Scheduled notification cancelled successfully'
+        message: `Scheduled notification for ${targetDescription} cancelled successfully`
     });
 });
 
 module.exports = {
     registerToken,
     unregisterToken,
+    getUserTokens,
     sendToUser,
     sendToUsers,
     sendToAll,
     cleanupExpiredTokens,
-    getUserTokens,
-    sendToMosqueUsers,
-    scheduleNotification,
     getScheduledNotifications,
     cancelScheduledNotification
 };
